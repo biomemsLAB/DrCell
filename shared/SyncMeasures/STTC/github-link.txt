@@ -1,0 +1,3 @@
+https://github.com/CCutts/Detecting_pairwise_correlations_in_spike_trains/blob/master/spike_time_tiling_coefficient.c
+
+downloaded 13.7.2018 15:46 Uhr
