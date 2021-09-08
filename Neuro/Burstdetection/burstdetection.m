@@ -4,11 +4,12 @@
 % 
 % Burstdetection input: 
 % - Name: string containing the name of desired burstdetection algorithm
-% - SPIKES: timestamps of spikes
+% - SPIKES: matrix containing timestamps of spikes in seconds (matrix NxM, N: nth spike position in seconds, M: electrode number)
 % - rec_dur: recording duration in seconds
-% - pref(1): SIB_min: minimal number of spikes per burst. PREF(5)=SIB_min, PREF(6)=ISI_max, PREF(8)=BurstIdleTime
-% - pref(2): ISI_max: maximal interspikeintervall in seconds
-% - pref(3): IBI_min: minimal interburstintervall in seconds
+% optional input:
+% - pref.SIB_min: minimal number of spikes per burst (default: 3 spikes per burst).
+% - pref.ISI_max: maximal interspikeintervall in seconds (default: 0.1 s)
+% - pref.IBI_min: minimal interburstintervall in seconds (default 0 s)
 % Burstdetection output:
 % - BURSTS (structure)
 % - BURSTS.name: name of used burstalgorithm
@@ -337,8 +338,8 @@ function BURSTS=burstdetection(Name,SPIKES,rec_dur,pref)
                %text(xvalues(x(1)),smooth(x(1)),'max1');
                %text(xvalues(x(2)),smooth(x(2)),'max2');
                %text(xvalues(x(3)),smooth(x(3)),'max3');
-               text(TH1,0,'th1');
-               text(TH2,0,'th2');
+               text(TH,0,'Th');
+               %text(TH2,0,'th2');
                end
 
                if 0
@@ -837,7 +838,7 @@ function BURSTS=burstdetection(Name,SPIKES,rec_dur,pref)
       
                         while SPIKES(m+1+i,n)-SPIKES(m+i,n) <= ISI_max(n)
                             i = i+1;
-                            if m+i >= size(nonzeros(SPIKES(:,n)),1)-1, break, end
+                            if m+i >= size(nonzeros(SPIKES(:,n)),1), break, end
                         end
                         o=1+i; % 1+i because i is increased by one if first two spikes fulfill the "while-loop" criteria
                         i=0;
@@ -848,6 +849,8 @@ function BURSTS=burstdetection(Name,SPIKES,rec_dur,pref)
                             BURSTS.SIB(k,n) = o;
                             k = k+1;
                             m=m+o;
+                            
+                            if m >= size(nonzeros(SPIKES(:,n)),1)-1, break, end % MC
                             
                             % IBI_min "Burst ilde time" 
                             while SPIKES(m,n)-BURSTS.END(k-1,n)<= IBI_min

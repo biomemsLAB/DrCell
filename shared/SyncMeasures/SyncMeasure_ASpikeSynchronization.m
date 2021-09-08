@@ -46,7 +46,7 @@ function [Sync]=SyncMeasure_ASpikeSynchronization(TS,rec_dur, flag_profile)
     %% 3) call synchrony measure
     S=STS.AdaptiveSPIKEsynchro();
     if flag_profile 
-        Sync.PREF.P = NaN; % not available yet: STS.AdaptiveSPIKESynchroProfile(); 
+        Sync.PREF.P = STS.AdaptiveSPIKEsynchroProfile(); 
         [Sync.PREF.M, Sync.PREF.OM, Sync.PREF.NOM] = STS.AdaptiveSPIKESynchroMatrix();
         % [SPIKESM,SPIKEOM,normSPIKEOM] = STS.AdaptiveSPIKESynchroMatrix(time1, time2, threshold);
         % SPIKESM: Spike synchronization matrix, SPIKEOM: Spike order matrix, normSPIKEOM: normalized spike order matrix

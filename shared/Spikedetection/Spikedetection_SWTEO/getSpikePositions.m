@@ -15,8 +15,7 @@ function idx2 = getSpikePositions(input_sig,fs,orig_sig,params)
 %Define a fixed spike duration, prevents from zeros before this duration is
 %over
 %maxoffset
-%spikeduration = 10e-4*fs; %10e-4
-spikeduration = round(10e-4*fs);%spikeduration = fix(10e-4*fs);%spikeduration = ceil(10e-4*fs);
+spikeduration = 10e-4*fs; %10e-4
 %minoffset
 minoffset = 3e-4*fs; %3e-4
 
@@ -26,13 +25,11 @@ L2 = length(orig_sig);
 
 switch params.method
     case 'numspikes'
-        
         out = input_sig;
         np = 0;
         idx2 = zeros(1,params.numspikes);
-
         while (np < params.numspikes)
-            [~, idxmax] = max(out); 
+            [~, idxmax] = max(out);
             idxl = idxmax;
             idxr = idxmax;
             out(idxmax) = 0;
@@ -52,8 +49,8 @@ switch params.method
                 idxr = idxr+1;
                 offsetcounter = offsetcounter + 1;
             end
-            
             %new approach
+            
             indexx = min(L2, idxmax-offset:idxmax+offset);
             %indexx = min(L2,idxl-offset:idxr+offset); %old approach
             indexx = max(offset,indexx);
@@ -62,13 +59,11 @@ switch params.method
             idx2(np+1) = idxmax - offset + idxx-1;
             np = np + 1;
         end
-
-              
     case {'energy'}
         rel_norm = params.rel_norm;
-       % p = params.p;
+        p = params.p;
         ysig = input_sig;
-       % normy = norm(input_sig);
+        normy = norm(input_sig);
         L = length(input_sig);
         %min and max length of signal duration
         maxoffset = 12;
@@ -92,6 +87,9 @@ switch params.method
                       offsetcounter < maxoffset )
                 ysig(max(1,idxl-1)) = 0;
                 idxl = idxl - 1;
+                %if (ysig(max(1,idxl))==0)
+                %    break;
+                %end
                 offsetcounter = offsetcounter + 1;
             end
             offsetcounter = 0;
@@ -100,6 +98,9 @@ switch params.method
                       offsetcounter < maxoffset )
                 ysig(min(L,idxr+1)) = 0;
                 idxr = idxr + 1;
+                %if (ysig(min(L,idxr)) == 0)
+                %    break;
+                %end
                 offsetcounter = offsetcounter + 1;
             end
 
@@ -125,49 +126,44 @@ switch params.method
                 break;
             end
         end
+        %figure(2), plot(temp);
     case {'auto','lambda'}
         %helper variables
-
-% new: faster algorithms (Sh.Kh)
-        test2 = input_sig; 
-        tmp = find(test2);
-        tmp(:,2)= tmp(:,1)+1+spikeduration;
-        if tmp(size(tmp,1),2)>size(test2,1)
-          tmp(size(tmp,1),2)=length(test2);
-        end
-        i=1;
-        while i<size(tmp,1)+1
-            if i<size(tmp,1)
-                while tmp(i,2)+1> tmp((i+1),1) 
-                    tmp(i+1,:)=[];
-                    if i>=size(tmp,1)-1
-                        break 
-                    end
-                end
+        idx2=[];
+        iii=1;
+        test2 = input_sig;
+        %loop until the input_sig is only zeros
+        while (sum(test2) ~= 0)
+            %get the first nonzero position
+            tmp = find(test2,1,'first');
+            test2(tmp) = 0;
+            %tmp2 is the counter until the spike duration
+            tmp2 = min(length(test2),tmp + 1);%protect against end of vec
+            counter = 0;
+            %search for the end of the spike
+            while(test2(tmp2) ~= 0 || counter<spikeduration )
+                test2(tmp2) = 0;
+                tmp2 = min(length(test2),tmp2 + 1);
+                counter = counter + 1;
             end
-            while test2(tmp(i,2))~= 0  && i < size(tmp,1)
-                tmp(i,2)=tmp(i,2)+1;
-                if tmp(i+1,1)==tmp(i,2)
-                    tmp(i+1,:)=[];
-                end
-            end
-            indexx = min(length(orig_sig),tmp(i,1)-offset:tmp(i,2)+offset); % mishe hazf kard fekr konam
+            %spike location is in intervall [tmp tmp2], look for the max 
+            %element in the original signal with some predefined offset: 
+            indexx = min(length(orig_sig),tmp-offset:tmp2+offset);
             indexx = max(offset,indexx);
             idxx = find( abs(orig_sig(indexx)) == ...
-                           max( abs(orig_sig(indexx) )),1,'first');
-            tmp(i,3) = tmp(i,1) - offset + idxx-1;
-            i=i+1;
+                                   max( abs(orig_sig(indexx) )),1,'first');
+            idx2(iii) = tmp - offset + idxx-1;
+            iii = iii+1;
         end
-             idx2=tmp(:,3)';
-      
-% %     case 'lambda2'
-% %         idx2 = [];
-% %         iii = 1;
-% %         test2 = input_sig;
-% %         while (sum(test2) ~= 0)
-% %             [~,tmp] = max(test2);
-% %             test2(tmp) = 0;
-% %             tmp2 = min
+        
+%     case 'lambda2'
+%         idx2 = [];
+%         iii = 1;
+%         test2 = input_sig;
+%         while (sum(test2) ~= 0)
+%             [~,tmp] = max(test2);
+%             test2(tmp) = 0;
+%             tmp2 = min
     otherwise
         error('unknown method');
 end

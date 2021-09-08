@@ -19,7 +19,7 @@ function [Sync,tim1,tim2,tim3]=SyncMeasure_Phasesynchronization(TS,rec_dur,SaRa)
 %     for n=1:N
 %         ST(int32(nonzeros(TS(:,n)*SaRa)-1),n)=1; % set 1 for each spike, 0.0001 s is at array pos. 1, 60 s at 60000
 %     end
-
+    
     
     %% Phase Sync:
     
@@ -28,8 +28,12 @@ function [Sync,tim1,tim2,tim3]=SyncMeasure_Phasesynchronization(TS,rec_dur,SaRa)
     for n=1:N
         if ~isempty(nonzeros(TS(:,n))) % only if electrode contains spikes    
             
+            % ensure that there is no double time stamp as this will result
+            % in an error when using interp1
+            TS_temp=unique(TS(:,n));
+            
             % double the timestamps [1 2 3] -> [1 1 2 2 3 3]
-            TS_temp = nonzeros(TS(:,n));
+            TS_temp = nonzeros(TS_temp);
             TS2 = zeros(size(TS_temp,1)*2,1);
             TS2(1:2:end)=TS_temp;
             TS2(2:2:end)=TS_temp+(1/SaRa/100); % ideally the second point is the same as before, however for interpolation purpose this point is increased by a very small value (here 0.1ms /100)
@@ -41,6 +45,8 @@ function [Sync,tim1,tim2,tim3]=SyncMeasure_Phasesynchronization(TS,rec_dur,SaRa)
             TS_art(2:size(TS2,1)+1) = TS2;
             TS_art(1)=0; % set first artificial spike at 0.0000 s
             TS_art(end)=rec_dur; % set last artificial spike at 60 s
+            
+            TS_art = unique(TS_art); % in case the original data set already contained spikes at 0 s or 60 s this line will remove the doulbe time stamp (otherwise error at interp1 function) 
             
             TAUK = TS_art; % x values
             y=zeros(size(TAUK)); % y values

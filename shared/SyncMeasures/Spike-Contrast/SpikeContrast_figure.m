@@ -14,7 +14,7 @@
 % needed functions:     [AllSpikesPerBin,actElPerBin,edges,xvalues]=getNumSpikesAndActElPerBin(TS,rec_dur,bin);
 
 
-function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_dur,binStepFactor,fig,rec)
+function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_dur,binStepFactor,fig,rec,hf)
     
     TS(TS==0)=NaN; % force NaN padding
     TS=sort(TS);
@@ -25,15 +25,22 @@ function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_du
         binStepFactor=2; % binStep = binSize/2 -> one overlap
         fig=0; % 1: show plot, 0: hide plot
         rec=0;
+        hf = [];
     end
     
     if nargin==3 % Default values
         fig=0; % 1: show plot, 0: hide plot
         rec=0;
+        hf = [];
     end
     
     if nargin==4 % Default values
         rec=0; 
+        hf = [];
+    end
+    
+    if nargin==5
+       hf = []; 
     end
     
     %% PARAMETER
@@ -45,7 +52,7 @@ function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_du
     % min bin size
     ISI=diff(TS);
     ISImin= min(min(ISI));
-    minBin=max([ISImin/2, 0.001]);
+    minBin=0.001;%max([ISImin/2, 0.01]);
         
 %     if fig % if figure mode use smallest ISI as minBin, otherwise use spikerate as this is faster
 %         ISI=diff(TS);
@@ -70,12 +77,12 @@ function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_du
     
     % plot spiketrains
     if fig
-        hf=figure(1);
+        if isempty(hf); hf=figure(1); end
         %hf.Units='centimeters';
         %hf.Position=[0 0 12 12]; 
         if rec; hf.Position=[0 0 800 400]; end
         hs(1)=subplot(3,1,1);
-        hs(1)=plotSpikeTrain(TS,hs(1),'line');
+        hs(1)=plotSpikeTrain(TS,hs(1),'dot');
         hs.YLabel.String='Spiketrains';
         hs(1).XLabel.String='time in seconds';
         hs(1).XLim=[0 rec_dur];
@@ -165,7 +172,7 @@ function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_du
             % record
             if rec
                 hf.Color=[1 1 1]; 
-                hl=legend('C','ActiveST','Contrast');
+                hl=legend('C','ActiveST','Contrast','max. synchrony');
                 hl.Location='eastoutside';              
                 F(i)=getframe(hf);   
             else
@@ -177,7 +184,7 @@ function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_du
     end
     
 
-    if fig && ~rec; hl=legend('C','ActiveST','Contrast'); hl.Location='eastoutside'; end
+    
     
     %% 2) Sync value is maximum of cost function C
     Sync.S= max(C);
@@ -221,6 +228,9 @@ function [Sync,C,MeanActiveEl,Contrast,bins,hs] = SpikeContrast_figure(TS,rec_du
             close(v)
         end
     end
+    
+    axes(hs(3))
+    if fig && ~rec; hl=legend('C ("Synchrony curve")','ActiveST','Contrast','Maximum Synchrony'); hl.Location='eastoutside'; end
 
     
         

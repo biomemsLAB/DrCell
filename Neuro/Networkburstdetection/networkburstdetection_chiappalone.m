@@ -1,3 +1,12 @@
+%% Detect networkbursts according to chiappalone et al. or jimbo et al.
+% Input:                TS: time stamps of spikes (nth spike, nth spike train) in seconds
+%                       rec_dur: duration of recording in seconds
+%                       bin: bin size in seconds
+%                       idleTime: minimal allowed time between two networkbursts (Not working yet!)
+%                       ThDecide: 0: chiappalone definition, 1: jimbo's lab
+%                       definition, 3: MC's definition
+%                       fig: 0: don't show figure, 1: show figure
+
 function [NB,AllSpikesPerBin,actElPerBin,Product,numberOfBins,Th]=networkburstdetection_chiappalone(TS,rec_dur,bin,idleTime,ThDecide,fig)
 
     if nargin < 5
@@ -5,11 +14,22 @@ function [NB,AllSpikesPerBin,actElPerBin,Product,numberOfBins,Th]=networkburstde
     end
 
     % init
-    NB.BEG=0;
-    NB.END=0;
-    NB.CORE=0;
-    NB.SIB=0;
-    NB.BD=0;
+    NB.BEG=NaN;
+    NB.END=NaN;
+    NB.CORE=NaN;
+    NB.SIB=NaN;
+    NB.BD=NaN;
+    
+    if ThDecide == 3
+        % MC: use bin size defined by Spike-contrast
+        [~,temp.PREF] = SpikeContrast(TS,rec_dur, 0.01);
+        bin=temp.PREF.S_smallBin;
+        if isnan(bin) % ensure that bin is a valid value
+            bin= rec_dur/2;
+        end
+        NB.PREF.bin=bin;
+        clear temp 
+    end
 
     % save prefs:
     NB.PREF.rec_dur=rec_dur;
@@ -32,7 +52,7 @@ function [NB,AllSpikesPerBin,actElPerBin,Product,numberOfBins,Th]=networkburstde
     if ThDecide == 0
         Th=9; % according to chiappalone et al.
     end
-    if ThDecide == 1 
+    if ThDecide == 1 || ThDecide == 3
         % use definition of jimbo's lab
         p_std=std(Product);
         p_mean=mean(Product);

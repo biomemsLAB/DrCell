@@ -4,14 +4,17 @@
 %           rec_dur:    recording duration of the file in seconds
 %           FRmin:      minimum firing rate in spikes per minute
 
-function [SPIKES, AMP]=deleteLowFiringRateSpiketrains(SPIKES,AMP,rec_dur,FRmin)
+function [SPIKES, AMP, numDeletedElectrodes]=deleteLowFiringRateSpiketrains(SPIKES,AMP,rec_dur,FRmin)
 
             SPIKES(isnan(SPIKES))=0;
 
+            numDeletedElectrodes=0;
+            
             for n=1:size(SPIKES,2)
                 if length(nonzeros(SPIKES(:,n)))<(FRmin*rec_dur/60)
                     SPIKES(:,n)=0;
                     AMP(:,n)=0;
+                    numDeletedElectrodes=1+numDeletedElectrodes;
                 end
             end
             

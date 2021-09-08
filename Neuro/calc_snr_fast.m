@@ -1,5 +1,8 @@
 
     function SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT)  
+    
+    SNR=0;
+    
     % --- Signal to Noise Ratio (CN,MC) ------------       
         
         if ~any(isnan(COL_RMS)) && ~any(isnan(COL_SDT))

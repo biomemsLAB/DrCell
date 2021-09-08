@@ -9,10 +9,11 @@ CellFormat=cell(size(MatrixFormat(1,:)));
 N=numel(CellFormat);
 for i=1:N
 	%CellFormat{i}=MatrixFormat(any(~isnan(MatrixFormat(:,i)),2),i);
-    CellFormat{i}=MatrixFormat(MatrixFormat(:,i)~=0 & ~isnan(MatrixFormat(:,i)),i);
-
+    CellFormat{i}=MatrixFormat(MatrixFormat(:,i)~=0 & ~isnan(MatrixFormat(:,i)),i)'; % ignoring all NAN-values
     
-                    % ignoring all NAN-values
+    if isempty(CellFormat{i})
+       CellFormat{i}=[]; 
+    end
                 
 end
 

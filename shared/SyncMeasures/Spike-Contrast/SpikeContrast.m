@@ -31,6 +31,10 @@ function [S,PREF] = SpikeContrast(TS,T, minBin)
     %% init
     S= NaN;
     PREF.s = NaN;
+    PREF.S_largeBin = NaN;
+    PREF.S_smallBin = NaN;
+    PREF.S_idx_largeBin = NaN;
+    PREF.S_idx_smallBin = NaN;
     PREF.Contrast = NaN;
     PREF.ActiveST = NaN;
     PREF.bins = NaN;
@@ -114,16 +118,22 @@ function [S,PREF] = SpikeContrast(TS,T, minBin)
     end
 
     %% 2) Sync value is maximum of synchrony curve s
-    S= max(s);
-    PREF.s = s;
-    PREF.Contrast = Contrast;
-    PREF.ActiveST = ActiveST;
-    PREF.bins = bins;
-    PREF.maxBin = maxBin;
-    PREF.minBin = minBin;
-    PREF.binStepFactor = binStepFactor;
-    PREF.binShrinkFactor = binShrinkFactor;
-    PREF.T = T;
-    PREF.t = toc; % calculation time
+    [S,S_idx_largeBin]= max(s);             % S: final synchrony value
+    [~,S_idx_smallBin]= max(flip(s));       % S: final synchrony value
+    PREF.s = s;                             % synchrony curve
+    PREF.S_idx_largeBin = S_idx_largeBin;   % index of S (largest bin)
+    PREF.S_idx_smallBin = S_idx_smallBin;   % index of S (smallest bin)
+    PREF.S_largeBin = bins(S_idx_largeBin); % bin size of S in seconds (largest bin)
+    tmp = flip(bins);
+    PREF.S_smallBin = tmp(S_idx_smallBin); % bin size of S in seconds (smallest bin)
+    PREF.Contrast = Contrast;               % Contrast curve
+    PREF.ActiveST = ActiveST;               % ActiveST curve
+    PREF.bins = bins;                       % x axis (all bin sizes)
+    PREF.maxBin = maxBin;                   % maximal bin size in seconds
+    PREF.minBin = minBin;                   % minimal bin size in seconds
+    PREF.binStepFactor = binStepFactor;     % bin step factor
+    PREF.binShrinkFactor = binShrinkFactor; % bin shrink factor
+    PREF.T = T;                             % duration of input spike trains in seconds
+    PREF.t = toc;                           % calculation time
     
 end

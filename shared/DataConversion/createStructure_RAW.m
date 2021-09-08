@@ -2,6 +2,8 @@
 % for this function (like e.g. Date, Time, M, T, ....)
 
 function RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel)
+
+
                    RAW.M=M;
                    RAW.T=T;
                    RAW.rec_dur=rec_dur;

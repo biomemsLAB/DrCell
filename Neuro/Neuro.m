@@ -9,7 +9,7 @@ disp ('--- Neuro ---');
 
 warning off all;
 
-global filedetails nr_channel nr_channel_old T M_OR SaRa NR_SPIKES EL_NAMES SPIKES3D SPIKES_OR waitbaradd waitbar_counter h_wait ACTIVITY END BEG EL_NUMS PREF rec_dur rec_dur_string
+global nr_channel nr_channel_old T M_OR SaRa NR_SPIKES EL_NAMES SPIKES3D SPIKES_OR waitbaradd waitbar_counter h_wait ACTIVITY END BEG EL_NUMS PREF rec_dur rec_dur_string
 global allorone threshrmsdecide ELEC_CHECK CALC COL_SDT COL_RMS SNR SNR_dB  Mean_SNR_dB EL_Auswahl ELEKTRODEN signal_draw signalCorr_draw timePr kappa_mean
 global MinRise MaxRise MinFall MaxFall MinDuration MaxDuration Meanrise stdMeanRise Meanfall stdMeanFall MeanDuration stdMeanDuration ORDER BURSTTIME numberfiles file filearray
 global SubMEA SubMEA_vier
@@ -18,11 +18,16 @@ global is_open CORRBIN TESTcorr CurElec S
 global Shapes data ti Coeff TEST MX y;
 global SPIKES3D_Norm Min Max check Elektrode SPIKES_Discrete Class cln SPIKES3D_discard Sorting Window SubmitSorting SubmitRefinement M_old SPIKES_Class NR_SPIKES_Sorted  NR_BURSTS_Sorted SPIKES_FPCA;
 global Time_Amp Time_Shape backup_M backup_EL CLEL Invert_M
+global isAlreadyFiltered % flag which is used for quick cardio and neuro analysis buttons
 % HDMEA
-global HDspikedata HDrowdata el_no bottomPanel_HD
+global HDspikedata HDrawdata HDmode el_no bottomPanel_HD
 %  data
-global path full_path M path_Neuro RAW
+global myPath full_path M path_Neuro RAW
 global Date Time
+% Connectivity
+global CM CM_inh CM_exh 
+% GUI Color
+global GUI_Color_BG GUI_Color_Buttons GUI_Color_BigButton % Vectors containing R G B
 
 % Spikeparameter:
 global SPIKES AMPLITUDES FR aeFRmean aeFRstd N_FR % FR=firing rate=spiking rate
@@ -57,6 +62,15 @@ T               = 0;    % Timestamps
 EL_NAMES        = 0;    % Electrode names
 EL_NUMS         = 0;
 
+
+% --- set GUI Color -----
+GUI_Color_BG = [1 1 1]; % white
+GUI_Color_Buttons = ([89 189 207]+40)/255; % blue
+GUI_Color_BigButton = ([0 204 187]+50)/255; % green
+
+set(0,'DefaultUicontrolBackgroundColor',GUI_Color_Buttons);
+set(0,'DefaultFigureColor',GUI_Color_BG);
+
 PREF            = 0;    % Preferences for analysis [1:facotr RMS for Threshold; 2:Beginning of threshold calculation; 3: Endtime to (2);
 % 4: Refractory time between 2 Spikes; 5: Min. number Spikes per Burst; 6: time between 1st and 2nd Spike in a Burst; 7: time between other Spikes;
 % 8: Refractory time between Bursts; 9: Elektrode for ZeroOut Calculation; 10: Threshold for ZeroOut; 11: time to set to zero after stimulation interference,
@@ -75,8 +89,10 @@ waitbar_counter = 0;
 THRESHOLDS      = 0;    % Thresholds of all electrodes
 THRESHOLDS_pos  = 0;
 spikedata       = false;    % 1, if Spikedaten exists
-HDspikedata     = false;        % 1 , if HDMEA spikedata(.bxr)daten exists
-HDrowdata       = false;        % 1 , if HDMEA rawdata(.bxr)daten exists
+HDspikedata     = false;        % 1 , if HDMEA spikedata(.brw)
+HDrawdata       = false;        % 1 , if HDMEA rawdata(.brx)
+HDmode = false;
+bottomPanel_HD  = [];
 thresholddata   = false;    % 1, if thresholds were calculated
 SPIKES          = [];    % Spike-Timestamps
 AMPLITUDES      = [];
@@ -143,68 +159,75 @@ fullpath = mfilename('fullpath'); % get path of this m-file (.../path/Neuro.m)
 % ---------------------------------------------------------------------
 
 % Main window
-mainWindow = figure('Position',[20 20 1224 700],'Tag','Neuro','Name','Dr.Cell - Neuro','NumberTitle','off','Toolbar','none','Resize','off','Color',[0.89 0.89 0.99]);
+mainWindow = figure('Position',[20 20 1224 700],'Tag','Neuro','Name','Dr.Cell - Neuro','NumberTitle','off','Toolbar','none','Resize','off','Color',GUI_Color_BG);
 
 % Infopanel (top left)
-leftPanel = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 560 370 140],'BackgroundColor',[0.89 0.89 0.99]);
+leftPanel = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 560 370 140],'BackgroundColor',GUI_Color_BG);
 
 % space for logo
 panax2 = axes('Parent', leftPanel, 'Units','pixels', 'Position', [75 80 218 50]);
-I = imread('biomems.tif');
-imshow(I,'Parent',panax2,'InitialMagnification','fit');
+[img] = imread('biomems.tif');
+imshow(img,'Parent',panax2,'InitialMagnification','fit');
 
 
 %Selection view - 4 or all at once (Sh.Kh)
-uicontrol('Parent',leftPanel,'Units','pixels','Position',[8 70 50 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','String','View','Enable','off','tag','VIEWtext');
-radiogroupview = uibuttongroup('Parent',leftPanel,'Visible','on','Units','Pixels','Position',[8 10 280 60],'BackgroundColor',[0.89 0.89 0.99],'BorderType','none','SelectionChangeFcn',@viewhandler);
-uicontrol('Parent',radiogroupview,'Units','normalized','Position',[0 .6 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','radio_allinone','Enable','off','String','All electrodes for 1 sec.','FontSize',7,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows 1 sec of all 60 Electrodes at the same time');
-uicontrol('Parent',radiogroupview,'Units','normalized','Position',[0 .3 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','radio_fouralltime','Enable','off','String','4 electrodes for the recorded time','FontSize',7,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows 4 Electrodes for the full recorded time.');
-uicontrol('Parent',radiogroupview,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','HDredraw','Enable','off','String','HDMEA Mode','FontSize',7,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows 1 Electrodes for the full recorded time');
+uicontrol('Parent',leftPanel,'Units','pixels','Position',[8 70 50 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor',GUI_Color_BG,'FontSize',10,'units','pixels','String','View','Enable','off','tag','VIEWtext');
+radiogroupview = uibuttongroup('Parent',leftPanel,'Visible','on','Units','Pixels','Position',[8 10 280 60],'BackgroundColor',GUI_Color_BG,'BorderType','none','SelectionChangeFcn',@viewhandler);
+uicontrol('Parent',radiogroupview,'Units','normalized','Position',[0 .6 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','radio_allinone','Enable','off','String','All electrodes for 1 sec.','FontSize',7,'BackgroundColor', GUI_Color_BG,'TooltipString','Shows 1 sec of all 60 Electrodes at the same time');
+uicontrol('Parent',radiogroupview,'Units','normalized','Position',[0 .3 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','radio_fouralltime','Enable','off','String','4 electrodes for the recorded time','FontSize',7,'BackgroundColor', GUI_Color_BG,'TooltipString','Shows 4 Electrodes for the full recorded time.');
+uicontrol('Parent',radiogroupview,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','HDredraw','Enable','off','String','HDMEA Mode','FontSize',7,'BackgroundColor', GUI_Color_BG,'TooltipString','Shows 1 Electrodes for the full recorded time');
 
 % Selection for Y-scale
-uicontrol('Parent',leftPanel,'units','pixels','position',[250 60 100 20],'style','text','FontWeight','bold','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'Enable','off','Tag','CELL_scaleBoxLabel','String','y-Axis Scale');
+uicontrol('Parent',leftPanel,'units','pixels','position',[250 60 100 20],'style','text','FontWeight','bold','BackgroundColor',GUI_Color_BG,'FontSize',10,'Enable','off','Tag','CELL_scaleBoxLabel','String','y-Axis Scale');
 scalehandle = uicontrol('Parent',leftPanel,'Units','pixels','Position',[250 30 100 25],'Tag','CELL_scaleBox','String',['50 uV  ';'100 uV ';'200 uV ';'500 uV ';'1000 uV'],'Enable','off','Tooltipstring','y-Skalierung','Value',2,'Style','popupmenu','callback',@redrawdecide);
 
 
 % Tabpanel (top right)
 tabgroup = uitabgroup('Parent',mainWindow,'Units','pixels','Position',[380 560 842 140]); drawnow;
-tab1 = uitab(tabgroup,'Title','Data');
-tab2 = uitab(tabgroup,'Title','Preprocessing');
-tab3 = uitab(tabgroup,'Title','Threshold');
-tab4 = uitab(tabgroup,'Title','Analysis');
-tab5 = uitab(tabgroup,'Title','Postprocessing');
-tab6 = uitab(tabgroup,'Title','Spike Sorting');
-tab7 = uitab(tabgroup,'Title','Export');
-tab8 = uitab(tabgroup,'Title','Fileinfo');
-tab9 = uitab(tabgroup, 'Title','About');
-tab10 = uitab(tabgroup, 'Title','Tools');
+tab1 = uitab(tabgroup,'Title','Data','BackgroundColor', GUI_Color_BG);
+tab2 = uitab(tabgroup,'Title','Preprocessing','BackgroundColor', GUI_Color_BG);
+tab3 = uitab(tabgroup,'Title','Threshold','BackgroundColor', GUI_Color_BG);
+tab4 = uitab(tabgroup,'Title','Analysis','BackgroundColor', GUI_Color_BG);
+tab5 = uitab(tabgroup,'Title','Postprocessing','BackgroundColor', GUI_Color_BG);
+tab6 = uitab(tabgroup,'Title','Spike Sorting','BackgroundColor', GUI_Color_BG);
+tab7 = uitab(tabgroup,'Title','Export','BackgroundColor', GUI_Color_BG);
+tab8 = uitab(tabgroup,'Title','Fileinfo','BackgroundColor', GUI_Color_BG);
+tab9 = uitab(tabgroup, 'Title','About','BackgroundColor', GUI_Color_BG);
+tab10 = uitab(tabgroup, 'Title','Tools','BackgroundColor', GUI_Color_BG);
 
-t1 = uipanel('Parent',tab1,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t2 = uipanel('Parent',tab2,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t3 = uipanel('Parent',tab3,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t4 = uipanel('Parent',tab4,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t5 = uipanel('Parent',tab5,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t6 = uipanel('Parent',tab6,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t7 = uipanel('Parent',tab7,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t8 = uipanel('Parent',tab8,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t9 = uipanel('Parent',tab9,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
-t10 = uipanel('Parent',tab10,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', [0.89 0.89 0.99]);
+t1 = uipanel('Parent',tab1,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t2 = uipanel('Parent',tab2,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t3 = uipanel('Parent',tab3,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t4 = uipanel('Parent',tab4,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t5 = uipanel('Parent',tab5,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t6 = uipanel('Parent',tab6,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t7 = uipanel('Parent',tab7,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t8 = uipanel('Parent',tab8,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t9 = uipanel('Parent',tab9,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
+t10 = uipanel('Parent',tab10,'Units','pixels','Position',[0 0 839 120],'BackgroundColor', GUI_Color_BG);
 
 
 %% Tab 1 (Data):
 
-% "Import Files" - Button
-uicontrol('Parent',t1,'Units','pixels','Position',[8 66 180 24],'Tag','CELL_openMatButton','String','Import File','FontSize',9,'TooltipString','Load a raw-file or spiketrain-file.','Callback',@openButtonCallback);
+% "Import File" - Button
+uicontrol('Parent',t1,'Units','pixels','Position',[8 66 180 24],'Tag','CELL_openMatButton','String','Import File','FontSize',9,'fontweight','bold','TooltipString','Load a raw-file or spiketrain-file.','BackgroundColor',GUI_Color_Buttons,'Callback',@openButtonCallback);
 
-% "Import Data File..." - Button
-%uicontrol('Parent',t1,'Units','pixels','Position',[8 66 180 24],'Tag','CELL_openFileButton','String','Import ASCII from LabView','FontSize',9,'TooltipString','Load a recorded .dat or .txt raw-file.','Callback',@openFileButtonCallback);
+% "Export RAW" - Button
+uicontrol('Parent',t1,'Units','pixels','Position',[8 37 180 24],'Tag','CELL_exportFileButton','String','Export RAW','FontSize',9,'TooltipString','Export the currently loaded raw-file as _RAW.mat.','Callback',@exportButtonCallback);
+
+% "Quick Neuro Analysis" - Button
+uicontrol('Parent',t1,'Units','pixels','Position',[8+180+25 66 180/2+50 24],'Tag','CELL_quickNeuroAnalysisButton','String','Neuro Analysis','FontSize',9,'fontweight','bold','TooltipString','Perform filtering (tab 2), threshold calculation (tab 3) and analysis (tab 4).','Enable','off','BackgroundColor',GUI_Color_BigButton,'Callback',@quickNeuroAnalysisButtonCallback);
+
+% "Quick Cardio Analysis" - Button
+uicontrol('Parent',t1,'Units','pixels','Position',[8+180+25 37 180/2+50 24],'Tag','CELL_quickCardioAnalysisButton','String','Cardio Analysis','FontSize',9,'fontweight','bold','TooltipString','Perform complete cardio analysis.','Enable','off','BackgroundColor',GUI_Color_BigButton,'Callback',@quickCardioAnalysisButtonCallback);
+
 
 % Import McRack-Datei
 %uicontrol('enable','on','Parent',t1,'Units','pixels','Position',[8 37 180 24],'Tag','CELL_openMcRackButton','String','Import ASCII from McRack','FontSize',9,'TooltipString','Load a recorded McRack file(.txt)','Callback',@openMcRackButtonCallback);
 
 % "Next File" und "Previous File" - Buttons
-%uicontrol('enable','on','Parent',t1,'Units','pixels','Position',[8 8 85 24],'Tag','CELL_previousfile','String','Previous File','FontSize',9,'TooltipString','Load previous file of selected list','enable','off','Callback',@openFileButtonCallback);
-%uicontrol('enable','on','Parent',t1,'Units','pixels','Position',[95 8 85 24],'Tag','CELL_nextfile','String','Next File','FontSize',9,'TooltipString','Load next file of selected list','enable','off','Callback',@openFileButtonCallback);
+%uicontrol('enable','off','visible','off','Parent',t1,'Units','pixels','Position',[8 8 85 24],'Tag','CELL_previousfile','String','Previous File','FontSize',9,'TooltipString','Load previous file of selected list','enable','off','Callback',@openFileButtonCallback);
+%uicontrol('enable','off','visible','off','Parent',t1,'Units','pixels','Position',[95 8 85 24],'Tag','CELL_nextfile','String','Next File','FontSize',9,'TooltipString','Load next file of selected list','enable','off','Callback',@openFileButtonCallback);
 
 % "Convert .dat-Files" - Button
 uicontrol('Parent',t1,'Units','pixels','Position',[392 37 180 24],'Tag','CELL_convertButton','String','Convert .dat to .mat','FontSize',9,'TooltipString','Convert one or more raw data files from .dat to .mat format to get better performance.','Callback',@convertDat2MatButtonCallback);
@@ -226,35 +249,35 @@ uicontrol('Parent',t1,'Units','pixels','Position',[590 66 180 24],'Tag','CELL_Si
 %% Tab 2 (Preprocessing):
 
 % Filter
-uicontrol('Parent',t2,'Units','pixels','Position',[27 85 40 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Filter');
-uicontrol('Parent',t2,'Units','pixels','Position',[8 89 20 15],'Style','checkbox','Tag','CELL_filterCheckbox','FontSize',9,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','apply digital filter.', 'CallBack',@onofilter);
+uicontrol('Parent',t2,'Units','pixels','Position',[27 85 40 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Filter');
+uicontrol('Parent',t2,'Units','pixels','Position',[8 89 20 15],'Style','checkbox','Tag','CELL_filterCheckbox','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','apply digital filter.', 'CallBack',@onofilter);
 
-uicontrol('Parent',t2,'Units','pixels','Position',[8 53 120 15],'Tag','CELL_low_filter','style','slider','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','min',0,'max',5000,'sliderstep',[0.001,0.01],'Enable','off','String','low boundary','CallBack',@filter_slider);
-uicontrol('Parent',t2,'Units','pixels','Position',[140 50 150 20],'Tag','CELL_low_boundary','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','low boundary');
-uicontrol('Parent',t2,'Units','pixels','Position',[10 72 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','0');
-uicontrol('Parent',t2,'Units','pixels','Position',[103 72 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','5000');
-uicontrol('Parent',t2,'Units','pixels','Position',[52 70 35 15],'Tag','CELL_low_edit','style','edit','HorizontalAlignment','right','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','0','CallBack',@filter_edit);
+uicontrol('Parent',t2,'Units','pixels','Position',[8 53 120 15],'Tag','CELL_low_filter','style','slider','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','min',0,'max',5000,'sliderstep',[0.001,0.01],'Enable','off','String','low boundary','CallBack',@filter_slider);
+uicontrol('Parent',t2,'Units','pixels','Position',[140 50 150 20],'Tag','CELL_low_boundary','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','low boundary');
+uicontrol('Parent',t2,'Units','pixels','Position',[10 72 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','0');
+uicontrol('Parent',t2,'Units','pixels','Position',[103 72 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','5000');
+uicontrol('Parent',t2,'Units','pixels','Position',[52 70 35 15],'Tag','CELL_low_edit','style','edit','HorizontalAlignment','right','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','0','CallBack',@filter_edit);
 
-uicontrol('Parent',t2,'Units','pixels','Position',[8 11 120 15],'Tag','CELL_high_filter','style','slider','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','min',0,'max',5000,'sliderstep',[0.0002,0.002],'Enable','off','String','high boundary','CallBack',@filter_slider);
-uicontrol('Parent',t2,'Units','pixels','Position',[140 8 150 20],'Tag','CELL_high_boundary','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','high boundary');
-uicontrol('Parent',t2,'Units','pixels','Position',[10 31 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','0');
-uicontrol('Parent',t2,'Units','pixels','Position',[103 31 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','5000');
-uicontrol('Parent',t2,'Units','pixels','Position',[52 28 35 15],'Tag','CELL_high_edit','style','edit','HorizontalAlignment','right','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','String','50','CallBack',@filter_edit);
+uicontrol('Parent',t2,'Units','pixels','Position',[8 11 120 15],'Tag','CELL_high_filter','style','slider','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','min',0,'max',5000,'sliderstep',[0.0002,0.002],'Enable','off','String','high boundary','CallBack',@filter_slider);
+uicontrol('Parent',t2,'Units','pixels','Position',[140 8 150 20],'Tag','CELL_high_boundary','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','high boundary');
+uicontrol('Parent',t2,'Units','pixels','Position',[10 31 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','0');
+uicontrol('Parent',t2,'Units','pixels','Position',[103 31 180 12],'Tag','CELL_filterBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','5000');
+uicontrol('Parent',t2,'Units','pixels','Position',[52 28 35 15],'Tag','CELL_high_edit','style','edit','HorizontalAlignment','right','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','String','50','CallBack',@filter_edit);
 
-uicontrol('Parent',t2,'Units','pixels','Position',[240 20 100 20],'Style','checkbox','Tag','CELL_bandpass','String','bandpass','FontSize',10,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','use bandpass that filters all frequencies outside of the specified range.', 'CallBack',@filter_choice1);
-uicontrol('Parent',t2,'Units','pixels','Position',[240 45 100 20],'Style','checkbox','Tag','CELL_bandstop','String','bandstop','FontSize',10,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','use bandstop that filters the specified frequency range out of the signal', 'CallBack',@filter_choice2);
+uicontrol('Parent',t2,'Units','pixels','Position',[240 20 100 20],'Style','checkbox','Tag','CELL_bandpass','String','bandpass','FontSize',10,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','use bandpass that filters all frequencies outside of the specified range.', 'CallBack',@filter_choice1);
+uicontrol('Parent',t2,'Units','pixels','Position',[240 45 100 20],'Style','checkbox','Tag','CELL_bandstop','String','bandstop','FontSize',10,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','use bandstop that filters the specified frequency range out of the signal', 'CallBack',@filter_choice2);
 
 %Zero Out Elektrode und artifact-time
-uicontrol('Parent',t2,'Units','pixels','Position',[379 85 100 20],'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','FontWeight','bold','String','Clear artefacts','Tag','headlines','enable','off');
-uicontrol('Parent',t2,'Units','pixels','Position',[360 89 20 15],'Style','checkbox','Tag','CELL_ZeroOutCheckbox','FontSize',9,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','apply Zero Out-algorithm, to get rid of stimulation artefakts.', 'CallBack',@onofffkt);
-uicontrol('Parent',t2,'Units','pixels','Position',[360 62 100 20],'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Threshold [uV]','TooltipString','Threshold to detect stimulation.','Tag','threshstim','enable','off');
+uicontrol('Parent',t2,'Units','pixels','Position',[379 85 100 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Clear artefacts','Tag','headlines','enable','off');
+uicontrol('Parent',t2,'Units','pixels','Position',[360 89 20 15],'Style','checkbox','Tag','CELL_ZeroOutCheckbox','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','apply Zero Out-algorithm, to get rid of stimulation artefakts.', 'CallBack',@onofffkt);
+uicontrol('Parent',t2,'Units','pixels','Position',[360 62 100 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Threshold [uV]','TooltipString','Threshold to detect stimulation.','Tag','threshstim','enable','off');
 uicontrol('Parent',t2,'Units','pixels','Position',[450 63 50 20],'style','edit','HorizontalAlignment','left','FontSize',9,'units','pixels','String',700,'Tag','th_stim','enable','off');
-uicontrol('Parent',t2,'Units','Pixels','position',[360 35 90 20],'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'String','Electrode','Tag','Elekstimname','enable','off');
+uicontrol('Parent',t2,'Units','Pixels','position',[360 35 90 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'String','Electrode','Tag','Elekstimname','enable','off');
 uicontrol('Parent',t2,'Units','Pixels','Position',[450 33 100 25],'Tag','CELL_selectelectrode','FontSize',8,'enable','on','String',['El 12';'El 13';'El 14';'El 15';'El 16';'El 17';'El 21';'El 22';'El 23';'El 24';'El 25';'El 26';'El 27';'El 28';'El 31';'El 32';'El 33';'El 34';'El 35';'El 36';'El 37';'El 38';'El 41';'El 42';'El 43';'El 44';'El 45';'El 46';'El 47';'El 48';'El 51';'El 52';'El 53';'El 54';'El 55';'El 56';'El 57';'El 58';'El 61';'El 62';'El 63';'El 64';'El 65';'El 66';'El 67';'El 68';'El 71';'El 72';'El 73';'El 74';'El 75';'El 76';'El 77';'El 78';'El 82';'El 83';'El 84';'El 85';'El 86';'El 87'],'Tooltipstring','Elektrodenauswahl','Style','popupmenu','enable','off');
-uicontrol('Parent',t2,'Units','pixels','Position',[360 8 100 20],'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','clear until','TooltipString','clear signal from beginning to end of stimulation + this time.','Tag','text_aftertime','enable','off');
+uicontrol('Parent',t2,'Units','pixels','Position',[360 8 100 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','clear until','TooltipString','clear signal from beginning to end of stimulation + this time.','Tag','text_aftertime','enable','off');
 uicontrol('Parent',t2,'Units','pixels','Position',[450 10 55 20],'style','edit','HorizontalAlignment','left','FontSize',9,'units','pixels','String','0.005','Tag','aftertime','enable','off');
-uicontrol('Parent',t2,'Units','pixels','Position',[436 8 10 20],'style','text','HorizontalAlignment','right','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','+','TooltipString','clear signal from beginning to end of stimulation + this time.','Tag','textplus','enable','off');
-uicontrol('Parent',t2,'Units','pixels','Position',[505 8 20 20],'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','s','TooltipString','clear signal from beginning to end of stimulation + this time.','Tag','textsek','enable','off');
+uicontrol('Parent',t2,'Units','pixels','Position',[436 8 10 20],'style','text','HorizontalAlignment','right','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','+','TooltipString','clear signal from beginning to end of stimulation + this time.','Tag','textplus','enable','off');
+uicontrol('Parent',t2,'Units','pixels','Position',[505 8 20 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','s','TooltipString','clear signal from beginning to end of stimulation + this time.','Tag','textsek','enable','off');
 
 % "clear Els" - Button
 uicontrol('Parent',t2,'Units','pixels','Position',[580 66 110 24],'Tag','CELL_ElnullenButton','String','Clear Els.','FontSize',10,'Enable','off','TooltipString','clears electrodes.','Callback',@ELnullenCallback);
@@ -266,10 +289,10 @@ uicontrol('Parent',t2,'Units','pixels','Position',[580 37 110 24],'Tag','CELL_in
 uicontrol('Parent',t2,'Units','pixels','Position',[705 37 110 24],'Tag','CELL_restoreButton','String','Restore Data','FontSize',10,'Enable','off','TooltipString','undo all filters and restore original data.','Callback',@unfilterButtonCallback);
 
 % "Apply" - Button
-uicontrol('Parent',t2,'Units','pixels','Position',[705 8 110 24],'Tag','CELL_applyButton','String','Apply...','FontSize',10,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','Callback',@Applyfilter);
+uicontrol('Parent',t2,'Units','pixels','Position',[705 8 110 24],'Tag','CELL_applyButton','String','Apply...','FontSize',10,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@Applyfilter);
 
-% "empty" - Button
-uicontrol('Parent',t2,'Units','pixels','Position',[705 66 110 24],'Tag','CELL_preprocessingempty1Button','String','empty','FontSize',10,'Enable','off','TooltipString','empty.','Callback',@preprocessingempty1Callback);
+% "Partially clear Signal" - Button
+uicontrol('Parent',t2,'Units','pixels','Position',[705 66 110 24],'Tag','CELL_partClearButton','String','part. clear Signal','FontSize',10,'Enable','off','TooltipString','Partially clear raw signal (from t1 to t2) on all electrodes.','Callback',@partClearCallback);
 
 % "Smoothing" - Button
 uicontrol('Parent',t2,'Units','pixels','Position',[580 8 110 24],'Tag','CELL_smoothButton','String','Smooth Signal','FontSize',10,'Enable','off','TooltipString','smooth single electrodes.','Callback',@smoothButtonCallback);
@@ -277,53 +300,54 @@ uicontrol('Parent',t2,'Units','pixels','Position',[580 8 110 24],'Tag','CELL_smo
 
 %% Tab3 (Threshold)
 % Factor sigma to find spike-free windows
-uicontrol('Parent',t3,'Units','pixels','Position',[8 85 110 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','Enable','off','FontWeight','bold','String','Find Basenoise');
-uicontrol('Parent',t3,'Units','pixels','Position',[8 60 112 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Basefactor Noise');
+uicontrol('Parent',t3,'Units','pixels','Position',[8 85 110 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','FontWeight','bold','String','Find Basenoise');
+uicontrol('Parent',t3,'Units','pixels','Position',[8 60 112 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Basefactor Noise');
 uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','5','Tag','STD_noisewindow');
-uicontrol('Parent',t3,'Units','pixels','Position',[8 31 112 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Windowsize in ms');
+uicontrol('Parent',t3,'Units','pixels','Position',[8 31 112 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Windowsize in ms');
 uicontrol('Parent',t3,'Units','pixels','Position',[120 33 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','50','Tag','Size_noisewindow');
 uicontrol('Parent',t3,'Units','pixels','Position',[8 5 112 20],'Tag','CELL_HelpThreshold','String','Help?...','FontSize',10,'Enable','off','TooltipString','Explanations Threshold Calculation.','fontweight','bold','Callback',@HelpThresholdFunction);
 
 
 
 % Thresholds-selection
-uicontrol('Parent',t3,'Units','pixels','Position',[208 85 220 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Threshold Calculation Standard');
-uicontrol('Parent',t3,'Units','pixels','Position',[280 31 50 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Factor');
-uicontrol('Parent',t3,'Units','pixels','Position',[330 33 18 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox');
+uicontrol('Parent',t3,'Units','pixels','Position',[208 85 220 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Threshold Calculation Standard');
+uicontrol('Parent',t3,'Units','pixels','Position',[280 31 50 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Factor');
+uicontrol('Parent',t3,'Units','pixels','Position',[330 33 18 20],'style','edit','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox');
 
 % THRESHOLDS_pos (for positve thresholds to detect positve spikes)
-uicontrol('Parent',t3,'Units','Pixels','Position', [390 10 110 25],'Tag','posThCheckbox','String','Pos. Spikes','Enable','off','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99],'TooltipString','set threshold also for positive spikes to consider them in further analysis','Callback',@activatePosTh); % checkbox to activate positive threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [390 20 110 22],'Tag','negThCheckbox','String','Neg. Spikes','Enable','off','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','set threshold for negative spikes','Callback',@activateNegTh); % checkbox to activate negative threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [390 0 110 22],'Tag','posThCheckbox','String','Pos. Spikes','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','set threshold for positive spikes','Callback',@activatePosTh); % checkbox to activate positive threshold
 uicontrol('Parent',t3,'Units','pixels','Position',[350 33 18 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox_pos'); % factor for positive threshold
 
 % Dynamic Threshold
-uicontrol('Parent',t3,'Units','Pixels','Position', [390 30 110 20],'Tag','dynThCheckbox','String','Dyn. Th','Enable','off','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99],'TooltipString','Calcuate a dynamic threshold in case the raw signal is not highpass filtered (negative and/or positive thresholds possible)'); % checkbox to activate dynamic threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [390 40 110 22],'Tag','dynThCheckbox','String','Dyn. Th','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Calcuate a dynamic threshold in case the raw signal is not highpass filtered (negative and/or positive thresholds possible)'); % checkbox to activate dynamic threshold
 
 
 % Thresholds Auto or Manuell
-radiogroup2 = uibuttongroup('Parent',t3,'visible','on','Units','Pixels','Position',[150 10 100 40],'BackgroundColor',[0.89 0.89 0.99],'BorderType','none','SelectionChangeFcn',@handler2);
-uicontrol('Parent',radiogroup2,'Units','normalized','Position',[0 0.5 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_auto','String','Auto','Enable','off','FontSize',9,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','find threshold in thermal noise');
-uicontrol('Parent',radiogroup2,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_manu','String','Manual','Enable','off','FontSize',9,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','find threshold in given interval');
+radiogroup2 = uibuttongroup('Parent',t3,'visible','on','Units','Pixels','Position',[150 10 100 40],'BackgroundColor', GUI_Color_BG,'BorderType','none','SelectionChangeFcn',@handler2);
+uicontrol('Parent',radiogroup2,'Units','normalized','Position',[0 0.5 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_auto','String','Auto','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in thermal noise');
+uicontrol('Parent',radiogroup2,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_manu','String','Manual','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in given interval');
 
-radiogroup3 = uibuttongroup('Parent',t3,'visible','on','Units','Pixels','Position',[150 50 100 40],'BackgroundColor',[0.89 0.89 0.99],'BorderType','none','SelectionChangeFcn',@handler3);
-uicontrol('Parent',radiogroup3,'Units','normalized','Position',[0 0.5 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_rms','String','rms','Enable','off','FontSize',9,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','find threshold in thermal noise');
-uicontrol('Parent',radiogroup3,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_sigma','String','sigma','Enable','off','FontSize',9,'BackgroundColor', [0.89 0.89 0.99],'TooltipString','find threshold in given interval');
+radiogroup3 = uibuttongroup('Parent',t3,'visible','on','Units','Pixels','Position',[150 50 100 40],'BackgroundColor', GUI_Color_BG,'BorderType','none','SelectionChangeFcn',@handler3);
+uicontrol('Parent',radiogroup3,'Units','normalized','Position',[0 0.5 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_rms','String','rms','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in thermal noise');
+uicontrol('Parent',radiogroup3,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_sigma','String','sigma','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in given interval');
 
 uicontrol('Parent',t3,'Units','pixels','Position',[280 62 40 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','time_start','String','-','enable','off');
-uicontrol('Parent',t3,'Units','pixels','Position',[322 60 10 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','-','Tag','text_2','enable','off');
+uicontrol('Parent',t3,'Units','pixels','Position',[322 60 10 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','-','Tag','text_2','enable','off');
 uicontrol('Parent',t3,'Units','pixels','Position',[330 62 40 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','time_end','String','-','enable','off');
-uicontrol('Parent',t3,'Units','pixels','Position',[370 60 15 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','s','Tag','text_3','enable','off');
+uicontrol('Parent',t3,'Units','pixels','Position',[370 60 15 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','s','Tag','text_3','enable','off');
 
 % "Calculate" - Button
-uicontrol('Parent',t3,'Units','pixels','Position',[280 5 100 24],'Tag','CELL_calculateButton','String','Calculate...','FontSize',11,'Enable','off','TooltipString','Threshold. ','fontweight','bold','Callback',@CalculateThreshold);
+uicontrol('Parent',t3,'Units','pixels','Position',[280 5 100 24],'Tag','CELL_calculateButton','String','Calculate...','FontSize',11,'Enable','off','TooltipString','Threshold. ','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@CalculateThreshold);
 
 %Set Thresholds manually
 
-uicontrol('Parent',t3,'Units','Pixels','Position', [430 60 110 25],'Tag','Manual_threshold','String','All after','Enable','off','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99],'TooltipString','Setting all thresholds after the selected one');
+uicontrol('Parent',t3,'Units','Pixels','Position', [430 60 110 25],'Tag','Manual_threshold','String','All after','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Setting all thresholds after the selected one');
 
-uicontrol('Parent',t3,'Units','pixels','Position',[430 85 180 20],'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Enter Threshold');
-uicontrol('Parent',t3,'Units','pixels','Position',[500 58 100 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Electrode');
+uicontrol('Parent',t3,'Units','pixels','Position',[430 85 180 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Enter Threshold');
+uicontrol('Parent',t3,'Units','pixels','Position',[500 58 100 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Electrode');
 uicontrol('Parent',t3,'Units','pixels','Position',[620 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','Elsel_Thresh');
-uicontrol('Parent',t3,'Units','pixels','Position',[500 31 150 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Current Threshold');
+uicontrol('Parent',t3,'Units','pixels','Position',[500 31 150 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Current Threshold');
 uicontrol('Parent',t3,'Units','pixels','Position',[620 33 120 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','CELL_ShowcurrentThresh');
 
 uicontrol('Parent',t3,'Units','pixels','Position',[590 60 20 20],'Tag','CELL_safeButton','String','-','FontSize',10,'Enable','off','TooltipString','Safe Threshold. ','fontweight','bold','Callback',@Elminus);
@@ -349,7 +373,7 @@ uicontrol('Parent',t3,'Units','pixels','Position',[600 5 80 24],'Tag','THFile_sa
 %% Tab 4 (Analysis):
 
 % Preferences Drop Down
-uicontrol('Parent',t4,'Units','pixels','Position',[8 85 130 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','String','Default Settings','Enable','off');
+uicontrol('Parent',t4,'Units','pixels','Position',[8 85 130 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','String','Default Settings','Enable','off');
 defaulthandle = uicontrol('Parent',t4,'Units','pixels','Position',[8 66 130 20],'Tag','CELL_DefaultBox','String',['[Baker]    ';'[Kapucu]   ';'[Selinger] ';'[Wagenaar4]';'[Wagenaar3]';'16Hz       ';'[Cocatre]  '],'Enable','off','Tooltipstring','Default settings for Spike and Burstdetection','Value',1,'Style','popupmenu','callback',@handler);
 
 %Help - Info about burstdetection
@@ -358,114 +382,120 @@ uicontrol('Parent',t4,'Units','pixels','Position',[8 37 100 20],'Tag','CELL_Help
 
 
 % Spike/Burst-preferences
-uicontrol('Parent',t4,'Units','pixels','Position',[160 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','FontWeight','bold','String','Spike & Burst Criteria');
-uicontrol('Parent',t4,'Units','pixels','Position',[160 58 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Refractory Time in ms','TooltipString','time, where no other spike is detected after having detected one before.');
+uicontrol('Parent',t4,'Units','pixels','Position',[160 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Spike & Burst Criteria');
+uicontrol('Parent',t4,'Units','pixels','Position',[160 58 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Refractory Time in ms','TooltipString','time, where no other spike is detected after having detected one before.');
 uicontrol('Parent',t4,'Units','pixels','Position',[290 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','0','Tag','t_ref');
-uicontrol('Parent',t4,'Units','pixels','Position',[160 36 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Min. Spikes per Burst','TooltipString','a burst has to contain at least this number of spikes.');
+uicontrol('Parent',t4,'Units','pixels','Position',[160 36 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Min. Spikes per Burst','TooltipString','a burst has to contain at least this number of spikes.');
 uicontrol('Parent',t4,'Units','pixels','Position',[290 38 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','3','Tag','SIB_min');
-uicontrol('Parent',t4,'Units','pixels','Position',[160 14 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Max. Interburstinterval in ms','TooltipString','time, where no other burst is detected after having detected one before.');
+uicontrol('Parent',t4,'Units','pixels','Position',[160 14 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. Interburstinterval in ms','TooltipString','time, where no other burst is detected after having detected one before.');
 uicontrol('Parent',t4,'Units','pixels','Position',[290 16 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','0','Tag','IBI_max');
-uicontrol('Parent',t4,'Units','pixels','Position',[340 58 150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Max. Interspikeinterval in ms','TooltipString','as long time between spikes is smaller than this value, spikes belong to a burst.');
+uicontrol('Parent',t4,'Units','pixels','Position',[340 58 150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. Interspikeinterval in ms','TooltipString','as long time between spikes is smaller than this value, spikes belong to a burst.');
 uicontrol('Parent',t4,'Units','pixels','Position',[500 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','100','Tag','ISI_max');
-%uicontrol('Parent',t4,'Units','pixels','Position',[340 36 150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'units','pixels','String','Max. Time other SiBs in ms');
+%uicontrol('Parent',t4,'Units','pixels','Position',[340 36 150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. Time other SiBs in ms');
 %uicontrol('Parent',t4,'Units','pixels','Position',[500 38 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','100','Tag','t_nn');
 
 % "ISI-Histogram" - Button
 uicontrol('Parent',t4,'Units','pixels','Position',[550 58 105 25],'Tag','CELL_ISIhistogram','String','ISI-Histogram','FontSize',11,'Enable','off','TooltipString','Show Interspikeinterval-Histogram.','Callback',@ISIhistogramButtonCallback);
 
 % negative/positive spike decision and preferences
-uicontrol('Parent',t4,'Units','pixels','Position',[450 27 200 20],'Style','checkbox','Tag','negSpike_Box','String','neg. Spikes','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','only analyse negative Spikes');
-uicontrol('Parent',t4,'Units','pixels','Position',[450 7 200 20],'Style','checkbox','Tag','posSpike_Box','String','pos. Spikes','FontSize',9,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','only analyse positive Spikes');
+uicontrol('Parent',t4,'Units','pixels','Position',[450 27 200 20],'Style','checkbox','Tag','negSpike_Box','String','neg. Spikes','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','only analyse negative Spikes');
+uicontrol('Parent',t4,'Units','pixels','Position',[450 7 200 20],'Style','checkbox','Tag','posSpike_Box','String','pos. Spikes','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','only analyse positive Spikes');
 
 % "Analyse" - Button
-uicontrol('Parent',t4,'Units','pixels','Position',[550 7 105 25],'Tag','CELL_analyzeButton','String','Analyze...','FontSize',11,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','Callback',@Analysedecide);
+uicontrol('Parent',t4,'Units','pixels','Position',[550 7 105 25],'Tag','CELL_analyzeButton','String','Analyze...','FontSize',11,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@Analysedecide);
 
 % Spikedetection
-uicontrol('Parent',t4,'Units','pixels','Position',[680 87 200 20],'Style','checkbox','Tag','Spike_Box','String','Spikedetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','En/Disables Spikedetection');
+uicontrol('Parent',t4,'Units','pixels','Position',[680 87 200 20],'Style','checkbox','Tag','Spike_Box','String','Spikedetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Spikedetection');
 % Spikedetection (SWTTEO, F. Lieb)
-uicontrol('Parent',t4,'Units','pixels','Position',[780 87 200 20],'Style','checkbox','Tag','Spike2_Box','String','SWTTEO','FontSize',9,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','If checked, use a combination of the normal spikedetection and those of F. Lieb');
+uicontrol('Parent',t4,'Units','pixels','Position',[780 87 200 20],'Style','checkbox','Tag','Spike2_Box','String','SWTTEO','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','If checked, use a combination of the normal spikedetection and those of F. Lieb');
 % Burstdetection activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 67 200 20],'Style','checkbox','Tag','Burst_Box','String','Burstdetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','En/Disables Burstdetection');
+uicontrol('Parent',t4,'Units','pixels','Position',[680 67 200 20],'Style','checkbox','Tag','Burst_Box','String','Burstdetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Burstdetection');
 % SBE-detection activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 47 200 20],'Style','checkbox','Tag','SBE_Box','String','SBEdetection','FontSize',9,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','En/Disables SBEdetection (SBE=synchronous burst events)');
+uicontrol('Parent',t4,'Units','pixels','Position',[680 47 200 20],'Style','checkbox','Tag','SBE_Box','String','SBEdetection','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables SBEdetection (SBE=synchronous burst events)');
 % SBE-detection_old activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 27 200 20],'Style','checkbox','Tag','SBE_old_Box','String','SBEdetection (old)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','En/Disables SBEdetection (old version)');
+uicontrol('Parent',t4,'Units','pixels','Position',[680 27 200 20],'Style','checkbox','Tag','SBE_old_Box','String','SBEdetection (old)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables SBEdetection (old version)');
 % NETWORKBURSTS activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 7 200 20],'Style','checkbox','Tag','NB_Box','String','Networkbursts','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','En/Disables Networkburstdetection');
+uicontrol('Parent',t4,'Units','pixels','Position',[680 7 200 20],'Style','checkbox','Tag','NB_Box','String','Networkbursts','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Networkburstdetection');
 
 
 %% Tab 5 (Postprocessing):
 
 %"Checkboxen for Spike/Burst/Stimuli/Threshold-Marks"
-uicontrol('Parent',t5,'style','text','position',[10 85 40 20],'BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'Enable','off','Tag','CELL_showMarksCheckbox','units','pixels','String','Show...');
-uicontrol('Parent',t5,'Units','pixels','Position',[10 65 100 27],'Style','checkbox','Tag','CELL_showThresholdsCheckbox','String','Thresholds','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows the used tresholds.','Callback',@redrawdecide);
-uicontrol('Parent',t5,'Units','pixels','Position',[10 45 100 27],'Style','checkbox','Tag','CELL_showSpikesCheckbox','String','Spikes (green)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows the detected spikes.','Callback',@redrawdecide);
-uicontrol('Parent',t5,'Units','pixels','Position',[10 25 100 27],'Style','checkbox','Tag','CELL_showBurstsCheckbox','String','Bursts (yellow)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows the detected bursts.','Callback',@redrawdecide);
-uicontrol('Parent',t5,'Units','pixels','Position',[10 5 100 27],'Style','checkbox','Tag','CELL_showStimuliCheckbox','String','Stimuli (red)','FontSize',9,'Value',0,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','Shows the detected stimuli.','Callback',@redrawdecide);
+uicontrol('Parent',t5,'style','text','position',[10 85 40 20],'BackgroundColor', GUI_Color_BG,'FontSize',9,'Enable','off','Tag','CELL_showMarksCheckbox','units','pixels','String','Show...');
+uicontrol('Parent',t5,'Units','pixels','Position',[10 65 100 27],'Style','checkbox','Tag','CELL_showThresholdsCheckbox','String','Thresholds','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','Shows the used tresholds.','Callback',@redrawdecide);
+uicontrol('Parent',t5,'Units','pixels','Position',[10 45 100 27],'Style','checkbox','Tag','CELL_showSpikesCheckbox','String','Spikes (green)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','Shows the detected spikes.','Callback',@redrawdecide);
+uicontrol('Parent',t5,'Units','pixels','Position',[10 25 100 27],'Style','checkbox','Tag','CELL_showBurstsCheckbox','String','Bursts (yellow)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','Shows the detected bursts.','Callback',@redrawdecide);
+uicontrol('Parent',t5,'Units','pixels','Position',[10 5 100 27],'Style','checkbox','Tag','CELL_showStimuliCheckbox','String','Stimuli (red)','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','Shows the detected stimuli.','Callback',@redrawdecide);
 
 % Headline: Networkanalysis
-uicontrol('Parent',t5,'Units','pixels','Position',[130 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','FontWeight','bold','String','Networkanalysis');
-
-
-
-% "Networkbursts" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[130 66 110 24],'String','Networkbursts','Tag','CELL_Networkburst','FontSize',9,'Enable','off','TooltipString','Find networkbursts according to Chiappalone et al.','Callback',@NetworkburstsButtonCallback);
-
-% "Networkb. test" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[130 37 110 24],'Tag','CELL_Networkbursts','String','Networkb. test','FontSize',9,'Enable','off','TooltipString','Find network bursts','Callback',@NetworkburstsMCButtonCallback);
+uicontrol('Parent',t5,'Units','pixels','Position',[130 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Networkanalysis');
 
 % "Rasterplot" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[130 8 110 24],'String','Raster Plot','Tag','t4_buttons','FontSize',9,'Enable','off','TooltipString','Spike Sorting Function.','Callback',@rasterplotButtonCallback);
+uicontrol('Parent',t5,'Units','pixels','Position',[130 66 110 24],'String','Raster Plot','Tag','t4_buttons','FontSize',9,'Enable','off','TooltipString','Spike Sorting Function.','Callback',@rasterplotButtonCallback);
+
+% "Networkbursts" - Button
+uicontrol('Parent',t5,'Units','pixels','Position',[130 37 110 24],'String','Networkbursts','Tag','CELL_Networkburst','FontSize',9,'Enable','off','TooltipString','Find networkbursts according to Chiappalone et al.','Callback',@NetworkburstsButtonCallback);
+
+% "Spike-contrast" - Button
+uicontrol('Parent',t5,'Units','pixels','Position',[130 8 110 24],'String','Spike-contrast','Tag','CELL_test','FontSize',9,'Enable','off','TooltipString','Measure synchrony using Spike-contrast (Ciba et al. 2018).','Callback',@SpikeContrastButtonCallback);
+
+
+% "Networkb. test" - Button
+%uicontrol('Parent',t5,'Units','pixels','Position',[130 37 110 24],'Tag','CELL_Networkbursts','String','Networkb. test','FontSize',9,'Enable','off','TooltipString','Find network bursts','Callback',@NetworkburstsMCButtonCallback);
+
 
 % "Analyse SBE Events" - Button
 %uicontrol('Parent',t5,'Units','pixels','Position',[130 8 110 24],'Tag','CELL_Networkbursts','String','Analyse SBE','FontSize',9,'Enable','off','TooltipString','Analyse network bursts','Callback',@AnalyseSBE_ButtonCallback);
 
 
 % "Cross-correlation " - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[245 66 110 24],'String','Cross-Correlation','Tag','CELL_test3','FontSize',8,'Enable','off','TooltipString','Quantifie spike synchronicity between electrodes by means of "Cross-Correlation".','Callback',@Cross_correlation);
+%uicontrol('Parent',t5,'Units','pixels','Position',[245 66 110 24],'String','Cross-Correlation','Tag','CELL_test3','FontSize',8,'Enable','off','TooltipString','Quantifie spike synchronicity between electrodes by means of "Cross-Correlation".','Callback',@Cross_correlation);
 
 % "EventSync " - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[245 37 110 24],'String','Event Synchronisation','Tag','CELL_test3','FontSize',8,'Enable','off','TooltipString','Quantifie spike synchronicity between electrodes by means of "Event Synchronisation".','Callback',@Event_Synchronisation);
+%uicontrol('Parent',t5,'Units','pixels','Position',[245 37 110 24],'String','Event Synchronisation','Tag','CELL_test3','FontSize',8,'Enable','off','TooltipString','Quantifie spike synchronicity between electrodes by means of "Event Synchronisation".','Callback',@Event_Synchronisation);
 
 % "Mutual Information" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[245 8 110 24],'String','Mutual Information','Tag','CELL_test1','FontSize',9,'Enable','off','TooltipString','Quantifie spike synchronicity between electrodes by means of "Mutual Information"','Callback',@Mutual_Information);
+%uicontrol('Parent',t5,'Units','pixels','Position',[245 8 110 24],'String','Mutual Information','Tag','CELL_test1','FontSize',9,'Enable','off','TooltipString','Quantifie spike synchronicity between electrodes by means of "Mutual Information"','Callback',@Mutual_Information);
 
 
 % "Measure Sync " - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[360 66 110 24],'String','Measure Sync','Tag','CELL_MeasureSync','FontSize',9,'Enable','off','TooltipString','Measure Synchronization like cross-correlation, mutual information, phase synchronization.','Callback',@MeasureSyncButtonCallback);
+uicontrol('Parent',t5,'Units','pixels','Position',[245 66 110 24],'String','Measure Sync','Tag','CELL_MeasureSync','FontSize',9,'Enable','off','TooltipString','Measure Synchronization like cross-correlation, mutual information, phase synchronization.','Callback',@MeasureSyncButtonCallback);
 
-% "?? " - Button
-%uicontrol('Parent',t5,'Units','pixels','Position',[360 37 110 24],'String','???','Tag','CELL_test','FontSize',9,'Enable','off','TooltipString','unknown Function.','Callback',@unknwonButtonCallback);
+% "Connectivity Estimation " - Button
+uicontrol('Parent',t5,'Units','pixels','Position',[245 37 110 24],'String','Connectivity','Tag','CELL_test','FontSize',9,'Enable','off','TooltipString','Estimate functional connectivity of the network by means of TSPE (Stefano et al. 2018).','Callback',@EstimateConnectivityButtonCallback);
 
-% "?? " - Button
-%uicontrol('Parent',t5,'Units','pixels','Position',[360 8 110 24],'String','???','Tag','CELL_test','FontSize',9,'Enable','off','TooltipString','unknown Function.','Callback',@unknwonButtonCallback);
+
+% Headline: Cardio
+uicontrol('Parent',t5,'Units','pixels','Position',[475 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Cardio');
+
+% "Signalprocessing" - Button
+uicontrol('Parent',t5,'Units','pixels','Position',[475 66 110 24],'String','Signalprocessing','Tag','CELL_Signalprocessing','FontSize',9,'Enable','off','TooltipString','Opens a GUI to analyze cardio signals.','Callback',@signalprocessingButtonCallback);
+
 
 
 % Headline: Other
-uicontrol('Parent',t5,'Units','pixels','Position',[475 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','FontWeight','bold','String','Other');
-
+uicontrol('Parent',t5,'Units','pixels','Position',[705 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Other');
 
 %"Spiketrain" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[475 66 110 24],'Tag','CELL_frequenzanalyseButton','String','Spike Train','FontSize',9,'Enable','off','TooltipString','Spike train for individual electrodes.','Callback',@spiketrainButtonCallback);  %ANDY
+%uicontrol('Parent',t5,'Units','pixels','Position',[475 66 110 24],'Tag','CELL_frequenzanalyseButton','String','Spike Train','FontSize',9,'Enable','off','TooltipString','Spike train for individual electrodes.','Callback',@spiketrainButtonCallback);  %ANDY
 
 % "minimal spikerate" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[475 37 110 24],'String','min. Spikerate','Tag','CELL_minFR','FontSize',9,'Enable','off','TooltipString','Clear all spiketrains which number of spikes are lower than the choosen threshold.','Callback',@minFiringRateButtonCallback);
+uicontrol('Parent',t5,'Units','pixels','Position',[705 66 110 24],'String','min. Spikerate','Tag','CELL_minFR','FontSize',9,'Enable','off','TooltipString','Clear all spiketrains which number of spikes are lower than the choosen threshold.','Callback',@minFiringRateButtonCallback);
 
 % "Stationarity"- Button
-uicontrol('Parent',t5,'Units','pixels','Position',[475 8 110 24],'String','Stationarity','Tag','CELL_Stationarity','FontSize',9,'Enable','off','TooltipString','Test all spike trains for non-stationarity according to Eggermont et al.','Callback',@Stationarity_ButtonCallback);
-
+uicontrol('Parent',t5,'Units','pixels','Position',[705 37 110 24],'String','Stationarity','Tag','CELL_Stationarity','FontSize',9,'Enable','off','TooltipString','Test all spike trains for non-stationarity according to Eggermont et al.','Callback',@Stationarity_ButtonCallback);
 
 % "Autocorrelation" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[590 66 110 24],'String','Autocorrelation','Tag','CELL_Autocorrelation','FontSize',9,'Enable','off','TooltipString','Autocorrelation Function.','Callback',@correlationButtonCallback);
+%uicontrol('Parent',t5,'Units','pixels','Position',[590 66 110 24],'String','Autocorrelation','Tag','CELL_Autocorrelation','FontSize',9,'Enable','off','TooltipString','Autocorrelation Function.','Callback',@correlationButtonCallback);
 
 % "Crosscorrelation" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[590 37 110 24],'String','Crosscorrelation','Tag','CELL_Crosscorrelation','FontSize',9,'Enable','off','TooltipString','Autocorrelation Function.','Callback',@crosscorrelationButtonCallback);
+%uicontrol('Parent',t5,'Units','pixels','Position',[590 37 110 24],'String','Crosscorrelation','Tag','CELL_Crosscorrelation','FontSize',9,'Enable','off','TooltipString','Autocorrelation Function.','Callback',@crosscorrelationButtonCallback);
 
 % "Zero-Out Example" - Button
-uicontrol('Parent',t5,'Units','pixels','Position',[590 8 110 24],'Tag','CELL_ShowZeroOutExample','String','Example ZeroOut','FontSize',9,'Enable','off','TooltipString','Shows an Example of ZeroOut algorithm','Callback',@ZeroOutExampleButtonCallback);
+%uicontrol('Parent',t5,'Units','pixels','Position',[590 8 110 24],'Tag','CELL_ShowZeroOutExample','String','Example ZeroOut','FontSize',9,'Enable','off','TooltipString','Shows an Example of ZeroOut algorithm','Callback',@ZeroOutExampleButtonCallback);
 
-% "?? " - Button
-% uicontrol('Parent',t5,'Units','pixels','Position',[705 8 110 24],'String','???','Tag','CELL_test','FontSize',9,'Enable','off','TooltipString','unknown Function.','Callback',@unknwonButtonCallback);
+% "Clear Artefacts" - Button
+%uicontrol('Parent',t5,'Units','pixels','Position',[705 66 110 24],'String','Clear Artefacts','Tag','CELL_test','FontSize',9,'Enable','off','TooltipString','Clear all Spikes that appear too regularly.','Callback',@clearArtefactsCallback);
 
 
 
@@ -479,28 +509,28 @@ uicontrol('Parent',t6,'Units','pixels','Position',[360 66 110 24],'String','Spik
 uicontrol('Parent',t6,'Units','pixels','Position',[360 37 110 24],'String','Detection Refinement','Tag','CELL_Detektion Refinement','FontSize',8,'Enable','off','TooltipString','Detektion Refinement','Callback',@Detektion_Refinement);
 
 %Apply Expectation Maximation Algorithm
-uicontrol('Parent',t6,'Units','Pixels','Position',[475 70 170 20],'FontSize',9,'Tag','S_EM_GM','String','Expectation Maximation','Enable','off','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Units','Pixels','Position',[475 70 170 20],'FontSize',9,'Tag','S_EM_GM','String','Expectation Maximation','Enable','off','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
 
 %Apply EM k-means Algorithm
-uicontrol('Parent',t6,'Units','Pixels','Position',[475 50 170 20],'FontSize',9,'Tag','S_EM_k-means','String','EM k-means','Enable','off','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Units','Pixels','Position',[475 50 170 20],'FontSize',9,'Tag','S_EM_k-means','String','EM k-means','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
 
 %Wavelets on/off
-uicontrol('Parent',t6,'Units','Pixels','Position',[475 30 170 20],'FontSize',9,'Tag','S_Wavelet','String','Wavelet Packet Analysis','Enable','off','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Units','Pixels','Position',[475 30 170 20],'FontSize',9,'Tag','S_Wavelet','String','Wavelet Packet Analysis','Enable','off','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
 
 %FPCA Features
-uicontrol('Parent',t6,'Units','Pixels','Position',[475 10 170 20],'FontSize',9,'Tag','S_FPCA','String','FPCA Features','Enable','off','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Units','Pixels','Position',[475 10 170 20],'FontSize',9,'Tag','S_FPCA','String','FPCA Features','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
 
 %Electrode Selection
-uicontrol('Parent',t6,'Style', 'text','Position',[630 40 100 21],'HorizontalAlignment','left','String','Electrode: ','Enable','off','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Style', 'text','Position',[630 40 100 21],'HorizontalAlignment','left','String','Electrode: ','Enable','off','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
 uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
 
 % Shapes Window Dimension
-uicontrol('Parent',t6,'Style', 'text','Position', [630 72 80 20],'HorizontalAlignment','left','String', 'Window: ','FontSize',10,'Enable','off','FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Style', 'text','Position', [630 72 80 20],'HorizontalAlignment','left','String', 'Window: ','FontSize',10,'Enable','off','FontWeight','bold','BackgroundColor', GUI_Color_BG);
 uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
 uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
 
 % Class Nr.
-uicontrol('Parent',t6,'Style', 'text','Position', [630 8 100 21],'HorizontalAlignment','left','String','Cluster Nr.:','Enable','off','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+uicontrol('Parent',t6,'Style', 'text','Position', [630 8 100 21],'HorizontalAlignment','left','String','Cluster Nr.:','Enable','off','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
 uicontrol ('Parent',t6,'Units','Pixels','Position', [710 10 40 21],'Tag','S_K_Nr','HorizontalAlignment','right','FontSize',8,'Enable','off','Value',1,'String',0,'Style','edit');
 
 % "Analyse" - Button
@@ -510,8 +540,8 @@ uicontrol('Parent',t6,'Units','pixels','Position',[760 8 70 24],'Tag','Spike_Sor
 
 % "Export Summary" - Preferences checkboxes
 uicontrol('Parent',t7,'Units','pixels','Position',[8 66 180 24],'Tag','CELL_exportButton','String','Export Summary to .xls','FontSize',9,'Enable','off','TooltipString','Saves analysis results as .xls file (use xlswrite)','Callback',@safexlsButtonCallback);
-uicontrol('Parent',t7,'Units','pixels','Position',[15 28 120 27],'Style','checkbox','Tag','CELL_exportAllCheckbox','String','with Timestamps','FontSize',9,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','Write timestamps to file?');
-uicontrol('Parent',t7,'Units','pixels','Position',[15 8 120 27],'Style','checkbox','Tag','CELL_showExportCheckbox','String','open File now','FontSize',9,'Enable','off','BackgroundColor', [0.89 0.89 0.99],'TooltipString','Should the file be opened after exporting?');
+uicontrol('Parent',t7,'Units','pixels','Position',[15 28 120 27],'Style','checkbox','Tag','CELL_exportAllCheckbox','String','with Timestamps','FontSize',9,'Enable','off','Value',1,'BackgroundColor', GUI_Color_BG,'TooltipString','Write timestamps to file?');
+uicontrol('Parent',t7,'Units','pixels','Position',[15 8 120 27],'Style','checkbox','Tag','CELL_showExportCheckbox','String','open File now','FontSize',9,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','Should the file be opened after exporting?');
 
 % "Save Spikes"
 uicontrol('Parent',t7,'Units','pixels','Position',[584 66 180 24],'Tag','CELL_exportTimeAmpButton','String','Save Spikes as mat','FontSize',9,'Enable','on','TooltipString','Saves SPIKEZ (timestamps, amplitudes of spikes and fileinfos) as .mat-file','Callback',@SaveSpikesCallback);
@@ -520,40 +550,41 @@ uicontrol('Parent',t7,'Units','pixels','Position',[584 66 180 24],'Tag','CELL_ex
 % uicontrol('Parent',t7,'Units','pixels','Position',[584 36 180 24],'Tag','CELL_exportTimeShapeButton','String','Export Time Shape','FontSize',9,'Enable','on','TooltipString','Saves txt file without cleared electrodes','Callback',@ExportTimeShapeCallback);
 
 
+
 %% Tab 8 (Fileinfo):
 %Filename
-uicontrol('Parent',t8,'Units','pixels','Position',[55 75 250 20],'Tag','CELL_dataFile','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','Data file name.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [5 75 35 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Name:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[55 75 250 20],'Tag','CELL_dataFile','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','Data file name.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [5 75 35 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Name:','Enable','off');
 
 %Comment
-uicontrol('Parent',t8,'Units','pixels','Position',[55 50 250 20],'Tag','CELL_fileInfo','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','Data details.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [5 50 40 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Details:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[55 50 250 20],'Tag','CELL_fileInfo','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','Data details.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [5 50 40 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Details:','Enable','off');
 
 %Date and Time
-uicontrol('Parent',t8,'Units','pixels','Position',[55 25 100 20],'Tag','CELL_dataDate','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','day of recording.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [5 25 40 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Date:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[55 25 100 20],'Tag','CELL_dataDate','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','day of recording.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [5 25 40 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Date:','Enable','off');
 
-uicontrol('Parent',t8,'Units','pixels','Position',[205 25 100 20],'Tag','CELL_dataTime','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','time, when the recording was started.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [165 25 40 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Time:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[205 25 100 20],'Tag','CELL_dataTime','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','time, when the recording was started.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [165 25 40 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Time:','Enable','off');
 
 %Samplerate
-uicontrol('Parent',t8,'Units','pixels','Position',[455 75 100 20],'Tag','CELL_dataSaRa','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','Samplerate.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [325 75 100 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','SampleRate [Hz]:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[455 75 100 20],'Tag','CELL_dataSaRa','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','Samplerate.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [325 75 100 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','SampleRate [Hz]:','Enable','off');
 
 %Number of Electrodes
-uicontrol('Parent',t8,'Units','pixels','Position',[455 50 100 20],'Tag','CELL_dataNrEl','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','Number of Electrodes.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [325 50 80 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','#Electrodes:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[455 50 100 20],'Tag','CELL_dataNrEl','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','Number of Electrodes.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [325 50 80 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','#Electrodes:','Enable','off');
 
 %Signal Duration
-uicontrol('Parent',t8,'Units','pixels','Position',[455 25 100 20],'Tag','CELL_dataDur','Style','edit','BackgroundColor',[0.89 0.89 0.99],'TooltipString','measuring time of the recorded data.','Enable','off');
-uicontrol('Parent',t8,'style','text','position', [325 25 120 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Measuring time [s]:','Enable','off');
+uicontrol('Parent',t8,'Units','pixels','Position',[455 25 100 20],'Tag','CELL_dataDur','Style','edit','BackgroundColor', GUI_Color_BG,'TooltipString','measuring time of the recorded data.','Enable','off');
+uicontrol('Parent',t8,'style','text','position', [325 25 120 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Measuring time [s]:','Enable','off');
 
 
 
 %% Tab 9 (About):
-%uicontrol('Parent',t9,'style','text','position', [5 75 600 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','This software is property of the biomems lab of the University of Applied Sciences Aschaffenburg, Germany.','Enable','on');
-uicontrol('Parent',t9,'style','text','position', [5 46 600 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Contact us: www.h-ab.de\biomems or christiane.thielemann@h-ab.de .','Enable','on');
-uicontrol('Parent',t9,'style','text','position', [5 25 600 20],'BackgroundColor',[0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Postal: University of Applied Sciences - BioMEMS, Wuerzburger Str 45, 63743 Aschaffenburg, Germany','Enable','on');
+%uicontrol('Parent',t9,'style','text','position', [5 75 600 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','This software is property of the biomems lab of the University of Applied Sciences Aschaffenburg, Germany.','Enable','on');
+uicontrol('Parent',t9,'style','text','position', [5 46 600 20],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Contact us: www.th-ab.de\biomems or christiane.thielemann@th-ab.de .','Enable','on');
+uicontrol('Parent',t9,'style','text','position', [5 25 600 30],'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units','pixels','String','Postal: University of Applied Sciences - BioMEMS, Wuerzburger Str 45, 63743 Aschaffenburg, Germany','Enable','on');
 
 uicontrol('Parent',t9,'Units','pixels','Position',[5 75 150 20],'Tag','CELL_License','String','License Disclaimer','FontSize',10,'Enable','on','TooltipString','GNU GPL 2007','fontweight','bold','Callback',@HelpLicenseFunction);
 
@@ -570,7 +601,7 @@ uicontrol('Parent',t10,'Units','pixels','Position',[10 66 200 24],'String','Auto
 %% Signal windows:
 
 % Bottom Panel
-bottomPanel = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 5 1214 553],'Tag','CELL_BottomPanel','BackgroundColor', [0.89 0.89 0.99]);
+bottomPanel = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 5 1214 553],'Tag','CELL_BottomPanel','BackgroundColor', GUI_Color_BG);
 
 % Scrollbar vertical
 uicontrol('Parent',bottomPanel,'style', 'slider','Tag','CELL_slider','units', 'pixels', 'position', [1189 5 20 543],'Enable','off','visible','off','callback',@redrawdecide);
@@ -605,13 +636,13 @@ uicontrol('Parent',bottomPanel,'Units','pixels','Position',[1105 420-2*dist 45 2
 uicontrol('Parent',bottomPanel,'Units','pixels','Position',[1105 420-3*dist 45 20],'Tag','CELL_zeroButton4','String','Undo','Visible','off','TooltipString','clear signal of this electrode.','Callback',@undoButton4Callback);
 
 % Bottom Panel 2
-bottomPanel_zwei = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 5 1214 553],'Tag','CELL_BottomPanel_zwei','BackgroundColor', [0.89 0.89 0.99]);
+bottomPanel_zwei = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 5 1214 553],'Tag','CELL_BottomPanel_zwei','BackgroundColor', GUI_Color_BG);
 
 % Scrollbar horizontal
 uicontrol('Parent', bottomPanel_zwei,'style', 'slider','Tag','MEA_slider','units', 'pixels', 'position', [5 5 1204 20],'Enable','off','value',1,'callback',@redrawdecide);
 
 % Bottom Panel HD
-%bottomPanel_HD = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 553 1214 553],'Tag','CELL_BottomPanel_HD','BackgroundColor', [0.89 0.89 0.99]);
+%bottomPanel_HD = uipanel('Parent',mainWindow,'Units','pixels','Position',[5 553 1214 553],'Tag','CELL_BottomPanel_HD','BackgroundColor', GUI_Color_BG);
 
 % "Zoom"-Buttons
 uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 135 45 20],'Tag','CELL_zoomGraphButton4','String','Zoom','Visible','off','TooltipString','zoom into this Graph.','Callback',@zoomButton4Callback);
@@ -641,10 +672,10 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
     end
 
-% --- ScaleRedraw-Selection (CN)-----------------------------------------
+% --- ScaleRedraw-Selection (CN,MC)-----------------------------------------
     function redrawdecide(source,event) %#ok
         set(0,'CurrentFigure',mainWindow) % changes current figure so that gcf and sliderpos works
-        if HDspikedata==1 || HDrowdata==1
+        if HDmode
             HDredraw;
         elseif Viewselect == 1
             redraw_allinone;
@@ -685,34 +716,45 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
             'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur])
-        bottomPanel_HD= uipanel('Parent',mainWindow,'Units','pixels','Position',[5 5 1214 553],'Tag','CELL_BottomPanel_HD','BackgroundColor', [0.89 0.89 0.99]);
         
-        %         if  HDrowdata == true
+        % update file info if Panels were already loaded
+        if ~isempty(bottomPanel_HD) % if handle exist
+            if isvalid(bottomPanel_HD) % if handle is valid (it is not valid if it has been deleted before)
+                uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units', 'pixels', 'position', [50 5 400 20],'Parent', bottomPanel_HD, 'Tag','Showfilepath','String', file);
+            end
+        end
         
-        set(findobj(gcf,'Tag','CELL_BottomPanel_zwei'),'Visible','off');
-        set(findobj(gcf,'Tag','CELL_BottomPanel'),'Visible','off');
-        set(findobj(gcf,'Tag','CELL_BottomPanel_HD'),'Visible','on');
-        %---single analysis
-        
-        set(0,'CurrentFigure',mainWindow) % changes current figure so that gcf and sliderpos works
-        %             slider_pos = int8(get(findobj(gcf,'Tag','CELL_slider'),'value'));  % Position of Scrollbar
-        uicontrol('Parent',bottomPanel_HD,'style','text','units','Pixels','position', [20 5 30 20],'HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'Tag','CELL_electrodeLabel','String',' File: ','FontWeight','normal');
-        uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',9,'units', 'pixels', 'position', [50 5 400 20],'Parent', bottomPanel_HD, 'Tag','Showfilepath','String', file);
-        uicontrol('Parent',bottomPanel_HD,'style','text','units','Pixels','position', [20 160 140 25],'HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'Tag','CELL_electrodeLabel','String',' Electrode Nummber: ','FontWeight','bold');
-        uicontrol('Parent',bottomPanel_HD,'Style','PushButton','Units','Pixels','Position',[20 50 100 30],'String','Ok','ToolTipString','Start Analysis','CallBack',@View_Signal);
-        uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[45 110 60 25],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','1','Tag','EL_Select');
-        
-        % "Zoom"-Buttons
-        uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 135 45 20],'Tag','CELL_zoomGraphButton4','String','Zoom','Visible','on','TooltipString','zoom into this Graph.','Callback',@zoomButton4Callback);
-        
-        % 'Invert'-Buttons
-        uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 110 45 20],'Tag','CELL_invertButton4','String','Invert.','Visible','on','TooltipString','invert signal of this electrode.','Callback',@invertButton4Callback);
-        
-        % 'Zero'-Buttons
-        uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 15 60 20],'Tag','CELL_zeroButton4','String','Clear all','Visible','on','TooltipString','clear signal of this electrode.','Callback',@clearButtonallCallback);
-        uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 85 45 20],'Tag','CELL_zeroButton4','String','Clear','Visible','on','TooltipString','clear signal of this electrode.','Callback',@clearButton4Callback);
-        % 'Undo'-Buttons
-        uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 60 45 20],'Tag','CELL_zeroButton4','String','Undo','Visible','on','TooltipString','clear signal of this electrode.','Callback',@undoButton4Callback);
+        if isempty(findobj(gcf,'Tag','CELL_BottomPanel_HD')) % ensure that uicontrol is only created at first time
+            bottomPanel_HD= uipanel('Parent',mainWindow,'Units','pixels','Position',[5 5 1214 553],'Tag','CELL_BottomPanel_HD','BackgroundColor', GUI_Color_BG);
+            
+            %         if  HDrawdata == true
+            
+            set(findobj(gcf,'Tag','CELL_BottomPanel_zwei'),'Visible','off');
+            set(findobj(gcf,'Tag','CELL_BottomPanel'),'Visible','off');
+            set(findobj(gcf,'Tag','CELL_BottomPanel_HD'),'Visible','on');
+            %---single analysis
+            
+            set(0,'CurrentFigure',mainWindow) % changes current figure so that gcf and sliderpos works
+            %             slider_pos = int8(get(findobj(gcf,'Tag','CELL_slider'),'value'));  % Position of Scrollbar
+            uicontrol('Parent',bottomPanel_HD,'style','text','units','Pixels','position', [20 5 30 20],'HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'Tag','CELL_electrodeLabel','String',' File: ','FontWeight','normal');
+            uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',9,'units', 'pixels', 'position', [50 5 400 20],'Parent', bottomPanel_HD, 'Tag','Showfilepath','String', file);
+            uicontrol('Parent',bottomPanel_HD,'style','text','units','Pixels','position', [20 160 140 25],'HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'Tag','CELL_electrodeLabel','String',' Electrode Nummber: ','FontWeight','bold');
+            uicontrol('Parent',bottomPanel_HD,'Style','PushButton','Units','Pixels','Position',[20 50 100 30],'String','Ok','ToolTipString','Start Analysis','CallBack',@View_Signal);
+            uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[45 110 60 25],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','1','Tag','EL_Select');
+            
+            % "Zoom"-Buttons
+            uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 135 45 20],'Tag','CELL_zoomGraphButton4','String','Zoom','Visible','on','TooltipString','zoom into this Graph.','Callback',@zoomButton4Callback);
+            
+            % 'Invert'-Buttons
+            uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 110 45 20],'Tag','CELL_invertButton4','String','Invert.','Visible','on','TooltipString','invert signal of this electrode.','Callback',@invertButton4Callback);
+            
+            % 'Zero'-Buttons
+            uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 15 60 20],'Tag','CELL_zeroButton4','String','Clear all','Visible','on','TooltipString','clear signal of this electrode.','Callback',@clearButtonallCallback);
+            uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 85 45 20],'Tag','CELL_zeroButton4','String','Clear','Visible','on','TooltipString','clear signal of this electrode.','Callback',@clearButton4Callback);
+            % 'Undo'-Buttons
+            uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 60 45 20],'Tag','CELL_zeroButton4','String','Undo','Visible','on','TooltipString','clear signal of this electrode.','Callback',@undoButton4Callback);
+            
+        end
         
         View_Signal;
     end
@@ -730,7 +772,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         else
             
             uicontrol('style', 'text',...
-                'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize',12,'units', 'pixels', 'position', [600 150 70 25],...
+                'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize',12,'units', 'pixels', 'position', [600 150 70 25],...
                 'Parent', bottomPanel_HD, 'Tag', 'ShowElNames','String', EL_NAMES(el_no(1)));
             scale = get(scalehandle,'value');   % set Y-Scale
             switch scale
@@ -742,12 +784,13 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             end
             SubMEA_vier(4)=subplot(4,1,4,'Parent',bottomPanel_HD);
             % RAW signal
-            if HDrowdata==1
+            if HDrawdata==1
                 mm=RAW.M(:,el_no(1));
-                mm=double(mm);
+                %mm=double(mm); % rather use function digital2analog_sh() to ensure same ampl. values (MC)
                 if RAW.MaxVolt==-RAW.MinVolt
                     RAW.BitDepth= double(RAW.BitDepth);
-                    mm=(mm-(2^RAW.BitDepth)/2)*(RAW.MaxVolt*2/2^RAW.BitDepth);
+                    %mm=(mm-(2^RAW.BitDepth)/2)*(RAW.MaxVolt*2/2^RAW.BitDepth);
+                    mm = digital2analog_sh(mm,RAW); % rather use function to ensure same ampl. values (MC)
                     mm(mm<-4000)=0;
                     mm(mm>4000)=0;
                 end
@@ -839,17 +882,17 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         %         for n=1:8
         %             Elzeile = strcat('El X ',num2str(n));
-        %             uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 11,'units', 'pixels', 'position', [30 525-n*57 60 25],...
+        %             uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 11,'units', 'pixels', 'position', [30 525-n*57 60 25],...
         %                 'Parent', bottomPanel_zwei, 'String', Elzeile);
         %         end
         %
         %         for n=1:8
         %             Elspalte = strcat({'El '}, num2str(n),{'X'});
-        %             uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 11,'units', 'pixels', 'position', [54+n*121 520 60 25],...
+        %             uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 11,'units', 'pixels', 'position', [54+n*121 520 60 25],...
         %                 'Parent', bottomPanel_zwei, 'String', Elspalte);
         %         end
         %
-        %         uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 7,'units', 'pixels', 'position', [180 94 40 15],...
+        %         uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 7,'units', 'pixels', 'position', [180 94 40 15],...
         %             'Parent', bottomPanel_zwei, 'String', 'time / s');
         %
     end
@@ -952,7 +995,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             for n=0:3
                 
                 uicontrol('style', 'text',...
-                    'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [50 480-n*120 50 25],...
+                    'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [50 480-n*120 50 25],...
                     'Parent', bottomPanel, 'Tag', 'ShowElNames','String', EL_NAMES(graph_no+n));
                 SubMEA_vier(n+1)=subplot(4,1,n+1,'Parent',bottomPanel);
                 
@@ -1003,7 +1046,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                                     SpikeString = ['S/B: ', num2str(NR_SPIKES_Sorted(i,graph_no+n)),' / ',num2str(NR_BURSTS_Sorted(i,graph_no+n))];
                                     
                                     %Show number of spikes and bursts
-                                    uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-(n*120)-((i-1)*20)) 80 20],...
+                                    uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-(n*120)-((i-1)*20)) 80 20],...
                                         'Parent',bottomPanel, 'Tag','ShowSpikesBurstsperCell','ForegroundColor',[cmap(i,1),cmap(i,2),cmap(i,3)],'String',SpikeString);
                                 end
                             else
@@ -1016,7 +1059,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                                 SpikeString = ['S/B: ', num2str(NR_SPIKES_Sorted(1,graph_no+n)),' / ',num2str(NR_BURSTS_Sorted(1,graph_no+n))];
                                 
                                 %Show number of spikes and bursts
-                                uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-(n*120)) 80 20],...
+                                uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-(n*120)) 80 20],...
                                     'Parent',bottomPanel, 'Tag','ShowSpikesBurstsperCell','ForegroundColor',[cmap(1,1),cmap(1,2),cmap(1,3)],'String',SpikeString);
                             end
                             set(findobj(gcf,'Tag','ShowSpikesBurstsperCell'),'Visible','on'); % after changes set visibility "on"
@@ -1026,17 +1069,17 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                             set(findobj(gcf,'Tag','ShowSpikesBurstsperEL'),'Visible','on');
                             
                             %Write #Spikes und #Bursts fuer jede El.
-                            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [50 458-n*120 39 20],...
+                            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [50 458-n*120 39 20],...
                                 'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', '#Spikes','Visible','off');
-                            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [50 428-n*120 39 20],...
+                            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [50 428-n*120 39 20],...
                                 'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', '#Bursts','Visible','off');
                             
                             %Show number of spikes
-                            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [95 458-n*120 30 20],...
+                            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [95 458-n*120 30 20],...
                                 'Parent', bottomPanel, 'Tag', 'ShowSpikesBurstsperEL','String', NR_SPIKES(graph_no+n));
                             %Show number of bursts
                             if isfield(BURSTS,'BRn') && size(BURSTS.BEG,2) == size(SPIKEZ.TS,2)
-                                uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [95 428-n*120 30 20],...
+                                uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [95 428-n*120 30 20],...
                                     'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', BURSTS.BRn(graph_no+n));
                             end
                             
@@ -1074,14 +1117,14 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         else %if less than 4 electrodes were recorded
             for n=1:(nr_channel)
                 
-                uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1105 462-(n-1)*120 39 20],...
+                uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1105 462-(n-1)*120 39 20],...
                     'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', '#Spikes','Visible','off');
-                uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1105 432-(n-1)*120 39 20],...
+                uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1105 432-(n-1)*120 39 20],...
                     'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', '#Bursts','Visible','off');
                 
                 
                 uicontrol('style', 'text',...
-                    'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [25 450-(n-1)*120 50 25],...
+                    'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [25 450-(n-1)*120 50 25],...
                     'Parent', bottomPanel,'Tag', 'ShowElNames','String', EL_NAMES(n));
                 
                 SubMEA_vier(n)=subplot(4,1,n,'Parent',bottomPanel);
@@ -1131,7 +1174,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                                     SpikeString = ['S/B: ', num2str(NR_SPIKES_Sorted(i,n)),' / ',num2str(NR_BURSTS_Sorted(i,n))];
                                     
                                     
-                                    uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-((n-1)*120)-((i-1)*20)) 180 20],...
+                                    uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-((n-1)*120)-((i-1)*20)) 180 20],...
                                         'Parent',bottomPanel, 'Tag','ShowSpikesBurstsperCell','ForegroundColor',[cmap(i,1),cmap(i,2),cmap(i,3)],'String',SpikeString);
                                 end
                             else
@@ -1144,7 +1187,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                                 SpikeString = ['S/B: ', num2str(NR_SPIKES_Sorted(1,n)),' / ',num2str(NR_BURSTS_Sorted(1,n))];
                                 
                                 
-                                uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-(n-1)*120) 80 20],...
+                                uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1102 (490-(n-1)*120) 80 20],...
                                     'Parent',bottomPanel, 'Tag','ShowSpikesBurstsperCell','ForegroundColor',[cmap(1,1),cmap(1,2),cmap(1,3)],'String',SpikeString);
                             end
                             set(findobj(gcf,'Tag','ShowSpikesBurstsperCell'),'Visible','on');
@@ -1153,7 +1196,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                             set(findobj(gcf,'Tag','ShowSpikesBurstsperCell'),'Visible','off');
                             set(findobj('Tag','ShowSpikesBurstsperEL','Parent',bottomPanel),'Visible','on');
                             
-                            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-((n-1)*120) 30 20],...
+                            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-((n-1)*120) 30 20],...
                                 'Parent', bottomPanel, 'Tag', 'ShowSpikesBurstsperEL','String',NR_SPIKES(n));
                             
                             y_axis = ones(length(SP),1).*scale.*.9;
@@ -1162,7 +1205,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                                 'MarkerFaceColor','green','MarkerSize',9);
                             
                             
-                            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-((n-1)*120) 30 20],...
+                            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-((n-1)*120) 30 20],...
                                 'Parent',bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String',BURSTS.BRn(n));
                         end
                         
@@ -1265,8 +1308,8 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                 delete(SubMEA(58:63));
             end
             
-            showend = MEAslider_pos*SaRa;
-            showstart = showend - SaRa +1;
+            showend = int32(MEAslider_pos*SaRa);
+            showstart = showend - int32(SaRa) +1;
             n=2;
             ALL_CHANNELS = [12 13 14 15 16 17 21 22 23 24 25 26 27 28 31 32 33 34 35 36 37 38 41 42 43 44 45 46 47 48 51 52 53 54 55 56 57 58 61 62 63 64 65 66 67 68 71 72 73 74 75 76 77 78 82 83 84 85 86 87];
             ZUORDNUNG2= [9 17 25 33 41 49 2 10 18 26 34 42 50 58 3 11 19 27 35 43 51 59 4 12 20 28 36 44 52 60 5 13 21 29 37 45 53 61 6 14 22 30 38 46 54 62 7 15 23 31 39 47 55 63 16 24 32 40 48 56];
@@ -1283,6 +1326,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                     end
                     bottomPanel_zwei;
                     SubMEA(n) = subplot(8,8,n,'Parent',bottomPanel_zwei);
+                    %set(gca,'xlim',([T(showstart) T(showend)]),'XTickLabel',[],'YTickLabel',[]);
                     set(gca,'XTickLabel',[],'YTickLabel',[]);
                     
                     if n == 49
@@ -1321,17 +1365,17 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                     if  get(findobj(gcf,'Tag','CELL_showThresholdsCheckbox','Parent',t5),'value')
                         % display negative thresholds
                         hold on
-                        if SPIKEZ.PREF.dyn_TH==1 % if threshold is dynamic
+                        if SPIKEZ.PREF.dyn_TH % if threshold is dynamic
                             T_new=0:size(T,2)/(size(SPIKEZ.neg.THRESHOLDS.Th,1)*SaRa):T(end);
                             plot(T_new,SPIKEZ.neg.THRESHOLDS.Th(:,n),'LineStyle','--','Color','red');
-                        else
+                        elseif SPIKEZ.neg.flag % if negative threshold
                             line ('Xdata',[0 T(1,end)],'Ydata',[SPIKEZ.neg.THRESHOLDS.Th(1,n) SPIKEZ.neg.THRESHOLDS.Th(1,n)],'LineStyle','--','Color','red');
                         end
                         hold off
                         % display positive thresholds
-                        if size(SPIKEZ.pos.THRESHOLDS.Th,2)==size(RAW.M,2)
+                        if SPIKEZ.pos.flag
                             hold on
-                            if SPIKEZ.PREF.dyn_TH==1 % if threshold is dynamic
+                            if SPIKEZ.PREF.dyn_TH % if threshold is dynamic
                                 T_new=0:size(T,2)/(size(SPIKEZ.pos.THRESHOLDS.Th,1)*SaRa):T(end);
                                 plot(T_new,SPIKEZ.pos.THRESHOLDS.Th(:,n),'LineStyle','--','Color','red');
                             else
@@ -1379,17 +1423,17 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             
             for n=1:8
                 Elzeile = strcat('El X ',num2str(n));
-                uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 11,'units', 'pixels', 'position', [30 525-n*57 60 25],...
+                uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 11,'units', 'pixels', 'position', [30 525-n*57 60 25],...
                     'Parent', bottomPanel_zwei, 'String', Elzeile);
             end
             
             for n=1:8
                 Elspalte = strcat({'El '}, num2str(n),{'X'});
-                uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 11,'units', 'pixels', 'position', [54+n*121 520 60 25],...
+                uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 11,'units', 'pixels', 'position', [54+n*121 520 60 25],...
                     'Parent', bottomPanel_zwei, 'String', Elspalte);
             end
             
-            uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 7,'units', 'pixels', 'position', [180 94 40 15],...
+            uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 7,'units', 'pixels', 'position', [180 94 40 15],...
                 'Parent', bottomPanel_zwei, 'String', 'time / s');
         end
     end
@@ -1855,7 +1899,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             if nr_channel>4
                 slider_pos = int8(get(findobj(gcf,'Tag','CELL_slider'),'value'));
                 Zoom_Electrode = nr_channel-slider_pos;
-                if HDrowdata == true || HDspikedata==true
+                if HDrawdata == true || HDspikedata==true
                     Zoom_Electrode = el_no;
                 end
                 if SubmitSorting(Zoom_Electrode) >= 1
@@ -1900,7 +1944,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                             %                                 'LineStyle','none','Marker','v','MarkerFaceColor','green','MarkerSize',9);
                         end
                     else
-                        if HDrowdata==true
+                        if HDrawdata==true
                             m = digital2analog_sh(RAW.M(:,Zoom_Electrode),RAW);
                             plot(T,m); grid on;
                         else
@@ -2061,7 +2105,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             end
         end
         
-        if HDrowdata == true || HDspikedata==true
+        if HDmode
             HDredraw();
         else
             redraw();
@@ -2219,11 +2263,14 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         redraw;
     end
     function clearButton4Callback(source,event)   %#ok
-        if nr_channel>4
+        
+        if nr_channel>4 && ~(HDrawdata || HDspikedata)
             slider_pos = int8(get(findobj(gcf,'Tag','CELL_slider'),'value'));
             Clear_Elektrode=nr_channel-slider_pos;
-        else
+        elseif ~HDmode
             Clear_Elektrode = 4;
+        elseif HDmode % if HDMEA mode
+            Clear_Elektrode = str2double(get(findobj(bottomPanel_HD,'Tag','EL_Select'),'string'));
         end
         
         RAW.M(:,Clear_Elektrode)=0;
@@ -2231,7 +2278,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             SPIKES(:,Clear_Elektrode)=0;
             BURSTS.BEG(:,Clear_Elektrode)=0;
         end
-        redraw;
+        redrawdecide
     end
     function clearButtonallCallback(source,event) %#ok
         if nr_channel>4
@@ -2298,18 +2345,21 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
 %Functions - Tab Data
 %----------------------------------------------------------------------
 
-% --- Open Files (sh-Kh)
+% --- Open Files (sh-Kh, MC)
     function openButtonCallback(~,~)
         
         % 'Open file' - Window
-        [file,path] = uigetfile({'*_RAW.mat; *_ST.mat; *.bxr; *.brw', 'RAW or TS files'; ...
+        [file,myPath] = uigetfile({'*.*',  'All Files (*.*)'
+            '*_RAW.mat; *_ST.mat; *.bxr; *.brw; *.dat', 'RAW or TS files'; ...
             '*_RAW.mat','Raw data file'; ...
             '*_TS.mat','Time stamp file'; ...
             '*.bxr','3brain TS file'; ...
             '*.brw','3brain raw data'; ...
             '*.dat','Labview raw data'; ...
             '*.txt','MCRACK raw data'; ...
-            '*.*',  'All Files (*.*)'},'Select one File with raw data or spiketrains.','MultiSelect','off');
+            '*.rhd','RHD2000 raw data'; ...
+            '*.h5','MCS raw or time stamp data'; },'Select one File with raw data or spiketrains.','MultiSelect','off');
+        
         if not(iscell(file)) && not(ischar(file)) % if canceled - dont do anything
             return
         end
@@ -2319,32 +2369,37 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % if Labview ASCII file is selected
         if strcmp(ext,'.dat')
-            openFileButtonCallback
-        end
-        % if MCRACK file is selected (NOTE: ACTUALLY NOT USED ANYMORE)
-        if strcmp(ext,'.txt')
-            openMcRackButtonCallback
-        end
-        % if .mat file is selected (_TS or _RAW files)
-        if strcmp(ext,'.mat')
-            openMatButtonCallback
-        end
-        % if .brw (3brain Raw File) file is selected
-        if strcmp(ext,'.brw')
-            ImportbrwFileCallback
-        end
-        % if .bxr (3brain Spike File) file is selected
-        if strcmp(ext,'.bxr')
-            ImportbxrFileCallback
+            openFileDat(file,myPath)
+            % if RHD file is selected (Fileformat used at GSI)
+        elseif strcmp(ext,'.rhd')
+            openFileRHD2000(file,myPath)
+            % if MCRACK file is selected (NOTE: ACTUALLY NOT USED ANYMORE)
+        elseif strcmp(ext,'.txt')
+            openFileMcRack(file,myPath)
+            % if .mat file is selected (_TS or _RAW files)
+        elseif strcmp(ext,'.mat')
+            openFileMat(file,myPath)
+            % if .brw (3brain Raw File) file is selected
+        elseif strcmp(ext,'.brw')
+            openFileBrw(file,myPath)
+            % if .bxr (3brain Spike File) file is selected
+        elseif strcmp(ext,'.bxr')
+            openFileBxr(file,myPath)
+            % if .h5 (Multichannel systems format, converted from .mcd to .h5 using "Multichannel Data Manager" (available online)
+        elseif strcmp(ext,'.h5')
+            openFileMcsH5(file,myPath)
+            % fileformat not supported
+        else
+            errordlg('Unknown Fileformat')
         end
         
+ 
     end
 
-% --- Open raw .mat-Files (MC) ------------------------------------------
-    function openMatButtonCallback(~,~)
-        %global temp
-        temp=[];
+% --- Init Variables before open a file (MC)
+    function initVariablesBeforeOpenFile()
         clear Energy Variance;
+        %temp = []; % must be initialized here in order to avoid error in function "openMatButtonCallback"
         SPIKES3D = [];
         SPIKES = [];
         M_OR = []; % used in function: SixWellButtonCallback
@@ -2386,8 +2441,6 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         THRESHOLDS      = 0;
         kappa_mean      = 0;
         threshrmsdecide = 1; %As Default setting use rms for threshold calculation
-        HDrowdata       = 0;
-        HDspikedata     = 0;
         SPIKEZ          = [];
         SPIKEZ.TSC      = 0;
         SPIKEZ.TS       = 0;
@@ -2395,130 +2448,37 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         varT            = 0;
         varTdata        = 0;
         RAW             = struct([]);
+        rec_dur         = 0;
+        SaRa            = 0;
+        %     fileN           = 0;
+        T               = 0;
+        EL_NUMS         = 0;
+        PREF            = 0;
+        THRESHOLDS_pos  = 0;
+        AMPLITUDES      = [];
+        NETWORKBURSTS.BEG= 0;
+        drawnbefore4    = false;
+        drawnbeforeall  = false;
+        is_open         = false;
+        NCh             = 0;
+        HDspikedata     = false;
+        HDrawdata       = true;
         
-        cd(path)
-        %-------------load file
-        H = waitbar(0,'Please wait - loading data file...');
-        load([file]);
-        waitbar(0.5,H,'Please wait - loading data file...');
+        set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','on');
+        set(findobj(gcf,'Tag','radio_fouralltime'),'Value',1,'Enable','on');
+        set(findobj(gcf,'Tag','HDredraw'),'Value',0,'Enable','off');
         
-        %        % -------------load Data whit matfile (Sh_KH)
-        %         MF=matfile(file);
-        %         RAW.M=MF.M;
-        %         SaRa=MF.SaRa;
-        %        % ------------end matfile
+    end
+
+% --- set settings after file has opened (old Code, put into separate function by MC)
+    function setSettingsAfterOpenFile()
         
-        if isfield(temp,'M') % if raw data
-            RAW=temp;
-            %RAW.M=temp.M;
-            RAW.M=single(temp.M);
-            T=temp.T;
-            rec_dur=temp.rec_dur;
-            SaRa=temp.SaRa;
-            EL_NAMES=temp.EL_NAMES;
-            EL_NUMS=temp.EL_NUMS;
-            nr_channel=temp.nr_channel;
-            Date=temp.Date;
-            Time=temp.Time;
-            fileinfo=temp.fileinfo;
-            full_path=file;
+        % Switch to HDMEA Mode or stay at normal mode:
+        HDmode = HDspikedata || HDrawdata;
+        
+        if HDmode
+            Viewselect = 2;
         end
-        if isfield(temp,'SPIKEZ') % if spiketrain
-            spiketraincheck=1;
-            spikedata=1;
-            SPIKEZ=temp.SPIKEZ;
-            % old_parameter
-            SPIKES=SPIKEZ.TS; % SPIKES, AMPLITUDES, rec_dur, SaRa, EL_NUMS, optional: fileinfo, Time, Date
-            AMPLITUDES=SPIKEZ.AMP;
-            % if SPIKEZ.TS = 0, then use negative spikes:
-            if SPIKEZ.TS==0
-                SPIKES=SPIKEZ.neg.TS;
-                AMPLITUDES=SPIKEZ.neg.AMP;
-                SPIKEZ.TS=SPIKEZ.neg.TS;
-                SPIKEZ.AMP=SPIKEZ.neg.AMP;
-            end
-            
-            if isfield(SPIKEZ,'N')
-                NR_SPIKES=SPIKEZ.N;
-            else
-                for n=1:size(SPIKEZ.TS,2)
-                    NR_SPIKES(n)=length(nonzeros(SPIKEZ.TS(:,n)));
-                end
-            end
-            if isfield(SPIKEZ,'PREF')
-                rec_dur=SPIKEZ.PREF.rec_dur;
-                SaRa=SPIKEZ.PREF.SaRa;
-                if isfield(SPIKEZ.PREF,'fileinfo')
-                    fileinfo=SPIKEZ.PREF.fileinfo;
-                    Time=SPIKEZ.PREF.Time;
-                    Date=SPIKEZ.PREF.Date;
-                    EL_NUMS=SPIKEZ.PREF.EL_NUMS;
-                    EL_NAMES=SPIKEZ.PREF.EL_NAMES;
-                else
-                    EL_NUMS=[12 13 14 15 16 17 21 22 23 24 25 26 27 28 31 32 33 34 35 36 37 38 41 42 43 44 45 46 47 48 51 52 53 54 55 56 57 58 61 62 63 64 65 66 67 68 71 72 73 74 75 76 77 78 82 83 84 85 86 87];
-                    clear EL_NAMES
-                    for i=1:size(EL_NUMS,2)
-                        EL_NAMES{i}=num2str(EL_NUMS(i));
-                    end
-                end
-            end
-            
-            waitbar(0.75,H,'Please wait - loading data file...');
-            
-            % ensure that all TS and AMP matrices have same size
-            % TS:
-            if isfield(SPIKEZ.pos,'TS')
-                I=max([size(SPIKEZ.TS,1),size(SPIKEZ.neg.TS,1),size(SPIKEZ.pos.TS,1)]);
-                N=max([size(SPIKEZ.TS,2),size(SPIKEZ.neg.TS,2),size(SPIKEZ.pos.TS,2)]);
-                TS=zeros(I,N);
-                TSneg=zeros(I,N);
-                TSpos=zeros(I,N);
-                TS(1:size(SPIKEZ.TS,1),1:size(SPIKEZ.TS,2))=SPIKEZ.TS(:,:);
-                TSneg(1:size(SPIKEZ.neg.TS,1),1:size(SPIKEZ.neg.TS,2))=SPIKEZ.neg.TS(:,:);
-                TSpos(1:size(SPIKEZ.pos.TS,1),1:size(SPIKEZ.pos.TS,2))=SPIKEZ.pos.TS(:,:);
-                SPIKEZ.TS=TS;
-                SPIKEZ.neg.TS=TSneg;
-                SPIKEZ.pos.TS=TSpos;
-                % AMP:
-                I=max([size(SPIKEZ.AMP,1),size(SPIKEZ.neg.AMP,1),size(SPIKEZ.pos.AMP,1)]);
-                N=max([size(SPIKEZ.AMP,2),size(SPIKEZ.neg.AMP,2),size(SPIKEZ.pos.AMP,2)]);
-                AMP=zeros(I,N);
-                AMPneg=zeros(I,N);
-                AMPpos=zeros(I,N);
-                AMP(1:size(SPIKEZ.AMP,1),1:size(SPIKEZ.AMP,2))=SPIKEZ.AMP(:,:);
-                AMPneg(1:size(SPIKEZ.neg.AMP,1),1:size(SPIKEZ.neg.AMP,2))=SPIKEZ.neg.AMP(:,:);
-                AMPpos(1:size(SPIKEZ.pos.AMP,1),1:size(SPIKEZ.pos.AMP,2))=SPIKEZ.pos.AMP(:,:);
-                SPIKEZ.AMP=AMP;
-                SPIKEZ.neg.AMP=AMPneg;
-                SPIKEZ.pos.AMP=AMPpos;
-                % delete rows that only contain zeros
-                SPIKEZ.TS( ~any(SPIKEZ.TS,2), : ) = [];  %rows
-                SPIKEZ.AMP( ~any(SPIKEZ.AMP,2), : ) = [];  %rows
-            end
-            t.M= struct([]);
-            RAW=t;
-            T=0:(1/SaRa):rec_dur-(1/SaRa);
-            RAW.M=zeros(size(T,2),size(SPIKEZ.TS,2));
-            for n=1:size(SPIKEZ.TS,2)
-                index=ceil(SPIKEZ.TS(:,n).*SaRa)+1;
-                index2 = index(~isnan(index)); % remove NaN values from index
-                index2=int32(index2);
-                RAW.M(index2,n)=SPIKEZ.AMP(~isnan(SPIKEZ.AMP(:,n)),n);
-            end
-            
-            
-            nr_channel=size(SPIKEZ.TS,2);
-            full_path=file;
-            
-            %recalculate parameter to be compatible with old TS-files (as
-            %some spike parameter has been changed
-            SPIKEZ.neg=struct;
-            SPIKEZ.neg.flag=0; % only calc spikesparameter for current TS
-            SPIKEZ.pos=struct;
-            SPIKEZ.pos.flag=0; % only calc spikesparameter for current TS
-            SPIKEZ=SpikeParameterCalculation(SPIKEZ);
-        end
-        
         
         % Settings:
         set(0, 'currentfigure', mainWindow); % set main window as current figure so "gcf" works correctly
@@ -2532,7 +2492,8 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             set(findobj(gcf,'Parent',t7),'Enable','on');
             set(findobj(gcf,'Tag','Spike_Box'),'value',0,'Enable','off');
             set(findobj(gcf,'Tag','Spike2_Box'),'value',0,'Enable','off');
-            set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
+            set(findobj(gcf,'Tag','CELL_partClearButton'),'Enable','on');
+            set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on');
             set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
             set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
             set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
@@ -2565,6 +2526,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         if spiketraincheck==0
             %Settings:
+            isAlreadyFiltered = false;
             set(findobj(gcf,'Tag','CELL_dataFile'),'String',file);
             set(findobj(gcf,'Tag','CELL_fileInfo'),'String',fileinfo{1});
             set(findobj(gcf,'Tag','CELL_dataSaRa'),'String',SaRa);
@@ -2580,7 +2542,11 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             set(findobj(gcf,'Parent',t3,'Enable','off'),'Enable','on');
             uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','5','Tag','STD_noisewindow');
             set(findobj(gcf,'Parent',t3,'Tag','CELL_sensitivityBox_pos'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_filterCheckbox'),'Enable','on');
+            set(findobj(gcf,'Tag','CELL_partClearButton'),'Enable','on');
+            set(findobj(gcf,'Tag','CELL_filterCheckbox'),'Enable','on','value',1);  % MC: value = 1 as default
+            onofilter(); % MC: call this function to update filter GUI
+            set(findobj(gcf,'Tag','CELL_quickNeuroAnalysisButton'),'Enable','on'); % MC: enable quickNeuroAnalysis Button
+            set(findobj(gcf,'Tag','CELL_quickCardioAnalysisButton'),'Enable','on'); % MC: enable quickCardioAnalysis Button
             set(findobj(gcf,'Tag','CELL_ZeroOutCheckbox'),'Enable','on');
             set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
             set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
@@ -2631,7 +2597,6 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                 %                 set(findobj(gcf,'Tag','CELL_slider'),'Enable','on',...
                 %                     'Min', 0, 'Max', size(RAW.M,2)-4, 'Value', size(RAW.M,2)-4,...
                 %                     'SliderStep', [1/(size(RAW.M,2)-4) 4/(size(RAW.M,2)-4)]);
-                
                 set(findobj(gcf,'Tag','CELL_slider'),'Enable','on',...
                     'Min', 0, 'Max', nr_channel-4, 'Value', nr_channel-4,...
                     'SliderStep', [1/(nr_channel-4) 4/(nr_channel-4)]);
@@ -2642,6 +2607,11 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
                 'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur]);
             redraw_allinone
+        elseif Viewselect == 2 % HDmeamode
+            set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
+            set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
+            set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
+            redrawdecide
         end
         is_open = true;
         rawcheck = true;
@@ -2659,746 +2629,135 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
         uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
         
-        waitbar(1,H,'Please wait - loading data file...');
-        close(H)
+    end
+
+% --- Open raw .mat-Files (MC) ------------------------------------------
+    function openFileMat(file,myPath)
+        
+        % init variables
+        initVariablesBeforeOpenFile;
+        HDrawdata       = 0;
+        HDspikedata     = 0;
+        
+        cd(myPath)
+        [SPIKEZ,RAW,spiketraincheck,spikedata,Date,Time,SaRa,EL_NAMES,EL_NUMS,NR_SPIKES,T,rec_dur,fileinfo,nr_channel,SPIKES,AMPLITUDES,HDspikedata] =read_mat(file, 1);
+        
+        % set Settings
+        setSettingsAfterOpenFile;
+        
+    end
+
+% --- Open .h5-Files (MC) ------------------------------------------
+    function openFileMcsH5(file,myPath)
+        
+        % init variables
+        initVariablesBeforeOpenFile;
+        HDrawdata       = 0;
+        HDspikedata     = 0;
+        
+        cd(myPath)
+        %-------------load file
+        
+        % load RAW data if available
+        [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel] = read_MCS_hd5_RAW(file, 1);
+        RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel);
+        
+        % load spike Timestamp data if available
+        SPIKEZ.TS = read_MCS_hd5_TS([myPath filesep file]);
+        
+        % set Settings
+        if ~isempty(SPIKEZ.TS)
+            spiketraincheck=1;
+        else
+            spiketraincheck=0;
+        end
+        setSettingsAfterOpenFile;
+        
+    end
+
+% -- Open RHD2000 files (MC) --------------------------------------------
+    function openFileRHD2000(file,myPath)
+        
+        % init variables
+        initVariablesBeforeOpenFile;
+        HDrawdata       = 0;
+        HDspikedata     = 0;
+        
+        % use path of last loaded file if exist
+        if myPath ~= 0
+            cd(myPath)
+        end
+        
+        % Load Data
+        [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel]=read_Intan_RHD2000_file(myPath, file);
+        
+        % Save Data in RAW structure
+        RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel);
+        
+        % set Settings
+        spiketraincheck = 0;
+        setSettingsAfterOpenFile;
         
     end
 
 % --- Open file (.dat) (MG&CN)-------------------------------------------
-% Note: Rather use external function "load_dat.m" if you need to load a
-% ".dat". file (MC)
-    function openFileButtonCallback(source,event) %#ok<INUSD>
+% Note: this function uses external function "read_dat.m" to load a ".dat". file (MC)
+    function openFileDat(file,myPath)
         
-        clear Energy Variance;
-        SPIKES3D = [];
-        SPIKES = [];
-        BURSTS.BEG = [];
-        BURSTS.END = [];
-        SubmitSorting = 0; % Sorting Variable is reset
-        SPIKES_Class = [];
-        set(findobj('Tag','S_K_Nr','parent',t6),'String',0); % Cluster Number in Sorting tab is reset
-        
-        clear BEGEND;
-        waitbar_counter = 0;
-        stimulidata     = false;
-        thresholddata   = false;
-        STIMULI_1       = 0;
-        STIMULI_2       = 0;
-        BEGEND          = 0;
-        BEG             = 0;
-        END             = 0;
-        cellselect      = 1;
-        handler;
-        Nr_SI_EVENTS    = 0;
-        Mean_SIB        = 0;
-        Mean_SNR_dB     = 0;
-        MBDae           = 0;
-        STDburstae      = 0;
-        aeIBImean       = 0;
-        aeIBIstd        = 0;
-        SI_EVENTS       = 0;
-        spikedata       = false;
-        EL_NUMS         = 0;
-        first_open      = false;
-        first_open4     = false;
-        spiketraincheck = false;
-        rawcheck        = false;
-        NR_SPIKES       = 0;
-        BURSTS.BRn       = 0;
-        THRESHOLDS      = 0;
-        kappa_mean      = 0;
-        threshrmsdecide = 1; %As Default setting use rms for threshold calculation
-        varT            = 0;
-        varTdata        = 0;
-        
+        % init variables
+        initVariablesBeforeOpenFile;
+        HDrawdata       = 0;
+        HDspikedata     = 0;
         
         % use path of last loaded file if exist
-        if path ~= 0
-            cd(path)
+        if myPath ~= 0
+            cd(myPath)
         end
         
-        % 'Open file' - Window
-        i = 1;
-        if strcmp(get(source,'Tag'),'CELL_nextfile')
-            while i <= size(filearray,2) && not(strcmp(file ,filearray(i)))
-                i = i+1;
-            end
-            i = i+1;
-            set(findobj('Tag','CELL_previousfile'),'enable','on');
-            if i == size(filearray,2)
-                set(source,'enable','off');
-            end
-            path = full_path(1:max(strfind(full_path,'\')));
-            file = filearray{i};
-        elseif strcmp(get(source,'Tag'),'CELL_previousfile')
-            while i <= size(filearray,2) && not(strcmp(file ,filearray(i)))
-                i = i+1;
-            end
-            i = i-1;
-            set(findobj('Tag','CELL_nextfile'),'enable','on');
-            if i == 1
-                set(source,'enable','off');
-            end
-            path = full_path(1:max(strfind(full_path,'\')));
-            file = filearray{i};
-        else
-            if full_path ~= 0
-                path = full_path(1:max(strfind(full_path,'\')));
-                [file,path] = uigetfile({'*.txt;*.dat','Data file (*.txt,*.dat)'},'Open data file...',path,'MultiSelect','on');
-            else
-                [file,path] = uigetfile({'*.txt;*.dat','Data file (*.txt,*.dat)'},'Open data file...','MultiSelect','on');
-            end
-            
-            if not(iscell(file)) && not(ischar(file)) % if canceled - dont do anything
-                %cd(path_Neuro)
-                return
-            end
-            
-            cd(path)
-            
-            if iscell(file) %if multiple files are selected
-                filearray = file;
-                file = filearray{i};
-                full_path = [path,file];
-                set(findobj('Tag','CELL_previousfile'),'enable','off');
-                set(findobj('Tag','CELL_nextfile'),'enable','on');
-            else
-                filearray = [];
-                full_path = [path,file];
-                set(findobj('Tag','CELL_previousfile'),'enable','off');
-                set(findobj('Tag','CELL_nextfile'),'enable','off');
-            end
-        end
-        
-        
-        disp ('Importing data file:'); tic
-        h = waitbar(0,'Please wait - importing data file...');
-        fid = fopen([path file]);                                   % open file
-        
-        fseek(fid,0,'eof');
-        filesize = ftell(fid);                                      % safes file size,
-        fseek(fid,0,'bof');
-        fileinfo = textscan(fid,'%s',1,'delimiter','\n');
-        
-        filedetails = textscan(fid,'%s',1,'delimiter','\n');
-        filedetailscell = textscan(char([filedetails{1}]),'%s','delimiter',',');
-        
-        Date = char([filedetailscell{1}]);
-        Time = char([filedetailscell{2}]);
-        Sample = char([filedetailscell{3}]);
-        Sample = Sample(1:(size(Sample,2)-3));
-        SaRa = str2double(Sample);
-        FileType = [];
-        if size(filedetailscell,1)==4
-            FileType = char([filedetailscell{4}]);
-        end
-        
-        
-        if isempty(Date)
-            waitbar(1,h,'Complete.'); close(h);
-            msgbox('Maybe you try to open a McRack-file with the wrong button?!','Dr.CELLues hint','help');
-            uiwait;
-            return
-        end
-        fseek(fid,0,'bof');
-        
-        %---if there is no information in the header---
-        if isempty(FileType)
-            
-            textscan(fid,'%s',1,'whitespace','\b\t','headerlines',2);
-            elresult = textscan(fid,'%5s',61*1,'whitespace','\b\t');    % read electrode names
-            EL_NAMES = [elresult{:}];
-            
-            if is_open==1
-                nr_channel_old = nr_channel;
-            end
-            
-            nr_channel = find(ismember(EL_NAMES, '[ms]')==1)-1;
-            if isempty(nr_channel)
-                nr_channel = find(ismember(EL_NAMES, '[ms] ')==1)-1;
-            end
-            
-            
-            EL_NAMES = EL_NAMES(1:nr_channel);
-            EL_CHAR = char(EL_NAMES);                                   % put electrode names in char..
-            
-            for n=1:size(EL_CHAR,1)                                     % ...convert into double.
-                EL_NUMS(n) = str2double(EL_CHAR(n,4:5));
-            end
-            
-            fseek(fid,0,'bof');
-            
-            if file(length(file)-2)=='t'
-                mresult = textscan(fid,'',1,'headerlines',4);
-                RAW.M = [mresult{2:length(mresult)-1}];                     % signal data
-            else
-                
-                %---if data is separated by comma---
-                %for separation by dot see ifelse FileType == 'R'!
-                
-                mresult = textscan(fid,'%n,%n',(nr_channel+1)*1,'headerlines',4);   % ...if .dat-file:
-                RAW.M = mresult{1}+mresult{2}.*(.1-.2*(mresult{1}<0));
-                RAW.M = reshape(RAW.M,(nr_channel+1),1);
-                RAW.M = RAW.M';
-                
-                RAW.M = RAW.M(:,2:(nr_channel+1));
-            end
-            
-            clear M_temp;
-            
-            
-            while ftell(fid)<filesize
-                if file(length(file)-2)=='t'
-                    mresult = textscan(fid,'',ceil(filesize/10000));
-                    RAW.M = cat(1,RAW.M,[mresult{2:length(mresult)-1}]);
-                    waitbar(ftell(fid)*.98/filesize,h,['Please wait - analyzing data file...(' int2str(ftell(fid)/1048576) ' of ' int2str(filesize/1048576),' MByte)']);
-                else
-                    %---if data is separated by comma---
-                    mresult = textscan(fid,'%n,%n',(nr_channel+1)*30000);
-                    M_temp = mresult{1}+mresult{2}.*(.1-.2*(mresult{1}<0));
-                    M_temp = reshape(M_temp,(nr_channel+1),[]);
-                    M_temp = M_temp';
-                    
-                    RAW.M = cat(1,RAW.M,M_temp(:,2:(nr_channel+1)));
-                    waitbar(ftell(fid)*.98/filesize,h,['Please wait - analyzing data file...(' int2str(ftell(fid)/1048576) ' of ' int2str(filesize/1048576),' MByte)']);
-                end
-            end
-            
-            
-            clear M_temp;
-            clear mresult;
-            
-            
-            
-            T2=(0:1/SaRa:(size(RAW.M,1)/SaRa));
-            T=T2(1:(length(T2)-1));
-            clear T2
-            
-            RAW.M = cat(2,EL_NUMS',RAW.M');
-            RAW.M = sortrows(RAW.M);
-            RAW.M = RAW.M(:,2:size(RAW.M,2));
-            RAW.M = RAW.M';
-            EL_NAMES = sortrows(EL_NAMES);
-            EL_NUMS = sort(EL_NUMS);
-            rec_dur = ceil(T(length(T)));
-            rec_dur_string = num2str(rec_dur);
-            
-            %if needed delete %
-            %M_OR = RAW.M;                           % Copy of M
-            
-            fclose(fid);                        % Close file
-            waitbar(1,h,'Complete.'); close(h);
-            toc
-            
-            
-            % Rekonfigure Scrollbar and redraw
-            if Viewselect == 0
-                if nr_channel>4
-                    set(findobj(gcf,'Tag','CELL_slider'),'Enable','on',...
-                        'Min', 0, 'Max', size(RAW.M,2)-4, 'Value', size(RAW.M,2)-4,...
-                        'SliderStep', [1/(size(RAW.M,2)-4) 4/(size(RAW.M,2)-4)]);
-                end
-                redraw
-            elseif Viewselect == 1
-                set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
-                    'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur]);
-                redraw_allinone
-            end
-            is_open = true;
-            rawcheck = true;
-            
-            
-            %---if rawdata---
-        elseif FileType(1) == 'R'
-            textscan(fid,'%s',1,'whitespace','\b\t','headerlines',2);
-            elresult = textscan(fid,'%5s',61*1,'whitespace','\b\t');
-            EL_NAMES = [elresult{:}];
-            
-            if is_open==1
-                nr_channel_old = nr_channel;
-            end
-            
-            nr_channel = find(ismember(EL_NAMES, '[ms]')==1)-1;
-            if isempty(nr_channel)
-                nr_channel = find(ismember(EL_NAMES, '[ms] ')==1)-1;
-            end
-            EL_NAMES = EL_NAMES(1:nr_channel);
-            EL_CHAR = char(EL_NAMES);
-            
-            for n=1:size(EL_CHAR,1)
-                EL_NUMS(n) = str2double(EL_CHAR(n,4:5));
-            end
-            
-            fseek(fid,0,'bof');
-            if file(length(file)-2)=='t'
-                mresult = textscan(fid,'',1,'headerlines',4);
-                RAW.M = [mresult{2:length(mresult)}];
-                %RAW.M = [mresult{2:length(mresult)-1}]; original changed 2013-04-04
-            else
-                %---separation by dot---
-                mresult = textscan(fid,'',1,'headerlines',4);
-                RAW.M = [mresult{2:length(mresult)}];
-            end
-            
-            clear M_temp;
-            NTimes = ceil((filesize - ftell(fid))/10000);
-            
-            while ftell(fid)<filesize-2
-                if file(length(file)-2)=='t'
-                    ftell(fid)
-                    mresult = textscan(fid,'',NTimes);%ceil(filesize/10000));
-                    RAW.M = cat(1,RAW.M,[mresult{2:length(mresult)}]);
-                    %RAW.M = [mresult{2:length(mresult)-1}]; original changed 2013-04-04
-                    waitbar(ftell(fid)*.98/filesize,h,['Please wait - analyzing data file...(' int2str(ftell(fid)/1048576) ' of ' int2str(filesize/1048576),' MByte)']);
-                else
-                    
-                    %---separation by dot---
-                    %- separation by comma see elseif isempty(FileType)
-                    ftell(fid)
-                    mresult = textscan(fid,'',NTimes);%ceil(filesize/10000));
-                    RAW.M = cat(1,RAW.M,[mresult{2:length(mresult)}]);
-                    waitbar(ftell(fid)*.98/filesize,h,['Please wait - analyzing data file...(' int2str(ftell(fid)/1048576) ' of ' int2str(filesize/1048576),' RAW.MByte)']);
-                end
-            end
-            
-            clear M_temp;
-            clear mresult;
-            T2=(0:1/SaRa:(size(RAW.M,1)/SaRa));
-            T=T2(1:(length(T2)-1));
-            clear T2
-            
-            RAW.M = cat(2,EL_NUMS',RAW.M');
-            RAW.M = sortrows(RAW.M);
-            RAW.M = RAW.M(:,2:size(RAW.M,2));
-            RAW.M = RAW.M';
-            EL_NAMES = sortrows(EL_NAMES);
-            EL_NUMS = sort(EL_NUMS);
-            rec_dur = ceil(T(length(T)));
-            rec_dur_string = num2str(rec_dur);
-            
-            
-            fclose(fid);                        % close file
-            waitbar(1,h,'Complete.'); close(h);
-            toc
-            
-            
-            % Rekonfigure Scrollbar and redraw
-            if Viewselect == 0
-                if nr_channel>4
-                    set(findobj(gcf,'Tag','CELL_slider'),'Enable','on',...
-                        'Min', 0, 'Max', size(RAW.M,2)-4, 'Value', size(RAW.M,2)-4,...
-                        'SliderStep', [1/(size(RAW.M,2)-4) 4/(size(RAW.M,2)-4)]);
-                end
-                redraw
-            elseif Viewselect == 1
-                set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
-                    'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur]);
-                redraw_allinone
-            end
-            is_open = true;
-            rawcheck = true;
-            
-            
-            
-            %---if file is a spiketrain---
-        elseif FileType(1) == 'S'
-            
-            elresult = textscan(fid,'%5s',61,'whitespace','\b\t','headerlines',2);
-            EL_NAMES = [elresult{:}];
-            EL_CHAR = char(EL_NAMES);
-            if is_open==1
-                nr_channel_old = nr_channel;
-            end
-            nr_channel = size(find(EL_CHAR(:,1)=='E'),1);
-            EL_NAMES = EL_NAMES(1:nr_channel);
-            EL_CHAR = char(EL_NAMES);
-            EL_NUMS=zeros(1,nr_channel);
-            
-            for n=1:nr_channel
-                EL_NUMS(n) = str2double(EL_CHAR(n,4:5));
-            end
-            fseek(fid,0,'bof');
-            
-            if file(length(file)-2)=='t'
-                mresult = textscan(fid,'',1,'headerlines',4);
-                RAW.M = [mresult{1:length(mresult)}];
-                %M = [mresult{1:length(mresult)-1}]; original changed
-                %2013-04-04
-            else
-                %---separation by dot---
-                mresult = textscan(fid,'',1,'headerlines',4);
-                RAW.M = [mresult{1:length(mresult)}];
-            end
-            
-            clear M_temp;
-            
-            if filesize<10000
-                divisor = 1000;
-            else
-                divisor = 10000;
-            end
-            
-            
-            while ftell(fid)<filesize
-                if file(length(file)-2)=='t'                                    %txt-file
-                    mresult = textscan(fid,'',ceil(filesize/divisor));
-                    RAW.M = cat(1,RAW.M,[mresult{1:length(mresult)}]);
-                    %M = [mresult{1:length(mresult)-1}]; original changed
-                    %2013-04-04
-                    waitbar(ftell(fid)*.7/filesize,h,['Please wait - analyzing Spiketrain file...(' int2str(ftell(fid)/1024) ' of ' int2str(filesize/1024),' kByte)']);
-                else                                                             %dat-file
-                    mresult = textscan(fid,'',ceil(filesize/divisor));
-                    RAW.M = cat(1,RAW.M,[mresult{1:length(mresult)}]);
-                    waitbar(ftell(fid)*.7/filesize,h,['Please wait - analyzing data file...(' int2str(ftell(fid)/1024) ' of ' int2str(filesize/1024),' kByte)']);
-                end
-            end
-            
-            RAW.M = cat(2,EL_NUMS',RAW.M');
-            RAW.M = sortrows(RAW.M);
-            RAW.M = RAW.M(:,2:size(RAW.M,2));
-            RAW.M = RAW.M';
-            EL_NAMES = sortrows(EL_NAMES);
-            EL_NUMS = sort(EL_NUMS);
-            
-            SPIKES_temp=RAW.M/1000;
-            SPIKESIZES = zeros(1,nr_channel);
-            
-            for n = 1:nr_channel                                         %Calculate Spikes per Elektrode
-                SPIKESIZES(n) = length(nonzeros(SPIKES_temp(:,n)));
-            end
-            MaxSpikes = max(SPIKESIZES);
-            SPIKES = zeros(MaxSpikes,nr_channel);
-            
-            for n = 1:size(SPIKES_temp,2)                                          %Calculate Spikes per Elektrode
-                if SPIKESIZES(n) ~= 0
-                    SPIKES(1:SPIKESIZES(n),n) = nonzeros(SPIKES_temp(:,n));
-                end
-            end
-            
-            clear M_temp;
-            clear mresult;
-            fclose(fid);                        % close file
-            T=0:1/SaRa:(ceil(max(SPIKES(:)))-1/SaRa);
-            
-            
-            RAW.M=zeros(size(T,2),nr_channel);
-            SP_TWO = round(SPIKES*SaRa);  %round to get integer
-            
-            for c = 1:nr_channel
-                bin = nonzeros(SP_TWO(:,c));
-                bin = bin+1;
-                RAW.M(bin,c) = -100;
-            end
-            
-            clear bin SP_TWO
-            
-            rec_dur = ceil(T(length(T)));
-            rec_dur_string = num2str(rec_dur);
-            
-            waitbar(1,h,'Complete.'); close(h);
-            spikedata = true;
-            SPIKES_OR=SPIKES;
-            
-            for n = 1:(nr_channel)
-                NR_SPIKES(n) = length(find(SPIKES(:,n)));
-            end
-            
-            THRESHOLDS = zeros(1,nr_channel);
-            SNR = zeros(1,nr_channel);
-            SNR_dB = zeros(1,nr_channel);
-            
-            
-            % Rekonfigure Scrollbar and redraw
-            if Viewselect == 0
-                if nr_channel>4
-                    set(findobj(gcf,'Tag','CELL_slider'),'Enable','on',...
-                        'Min', 0, 'Max', size(RAW.M,2)-4, 'Value', size(RAW.M,2)-4,...
-                        'SliderStep', [1/(size(RAW.M,2)-4) 4/(size(RAW.M,2)-4)]);
-                end
-                redraw
-            elseif Viewselect == 1
-                set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
-                    'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur]);
-                redraw_allinone
-            end
-            is_open = true;
-            spiketraincheck = true;
-            
-        else
-            waitbar(1,h,'Complete.'); close(h);
-            msgbox('Unknown fileformat!','Dr.CELL´s hint','help');
-            uiwait;
-            return
-        end
-        
-        
-        set(findobj(gcf,'Tag','CELL_dataFile'),'String',file);
-        set(findobj(gcf,'Tag','CELL_fileInfo'),'String',fileinfo{1});
-        
-        set(findobj(gcf,'Tag','CELL_dataSaRa'),'String',SaRa);
-        set(findobj(gcf,'Tag','CELL_dataNrEl'),'String',nr_channel);
-        set(findobj(gcf,'Tag','CELL_dataDate'),'String',Date);
-        set(findobj(gcf,'Tag','CELL_dataTime'),'String',Time);
-        set(findobj(gcf,'Tag','CELL_dataDur'),'String',rec_dur_string);
-        
-        delete(findobj(0,'Tag','ShowSpikesBurstsperEL'));
-        delete(findobj(0,'Tag','ShowSpikesBurstsperCell'));
-        
-        if nr_channel>1
-            set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-        end
-        
-        if spiketraincheck == 1
-            
-            set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
-            uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','5','Tag','STD_noisewindow');
-            set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t2,'Enable','on'),'Enable','off');
-            
-            %refresh
-            set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
-            set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_scaleBox'),'value',2,'Enable','off');
-            set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_DefaultBox'),'Enable','on');
-            set(findobj(gcf,'Parent',radiogroup2),'Enable','off');
-            set(findobj(gcf,'Parent',radiogroup3),'Enable','off');
-            set(findobj(gcf,'Tag','Manual_threshold'),'Enable','off')
-            set(findobj(gcf,'Tag','time_start'),'Enable','off');
-            set(findobj(gcf,'Tag','time_end'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_sensitivityBox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'Enable','off');
-            set(findobj(gcf,'Parent',t5,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t6,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t7,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t8,'Enable','off'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
-            set(findobj(gcf,'Tag','radio_allinone'),'Enable','on');
-            set(findobj(gcf,'Tag','radio_fouralltime'),'Enable','on');
-            set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
-            
-            if nr_channel>1
-                set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-            end
-            
-        else
-            set(findobj(gcf,'Parent',t3,'Enable','off'),'Enable','on');
-            uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','9999','Tag','STD_noisewindow');
-            set(findobj(gcf,'Parent',t3,'Tag','CELL_sensitivityBox_pos'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_filterCheckbox'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_ZeroOutCheckbox'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
-            set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_savitzkygolayButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_applyButton'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_scaleBox'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
-            set(findobj(gcf,'Parent',radiogroup2),'Enable','on');
-            set(findobj(gcf,'Parent',radiogroup3),'Enable','on');
-            set(findobj(gcf,'Tag','Manual_threshold'),'Enable','on')
-            set(findobj(gcf,'Tag','time_start'),'Enable','off');
-            set(findobj(gcf,'Tag','time_end'),'Enable','off');
-            set(findobj(gcf,'Parent',t4,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t5,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t6,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t7,'Enable','on'),'Enable','off');
-            set(findobj(gcf,'Parent',t8,'Enable','off'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
-            set(findobj(gcf,'Tag','CELL_exportButton'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_exportAllCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','CELL_showExportCheckbox'),'Enable','off');
-            set(findobj(gcf,'Tag','radio_allinone'),'Enable','on');
-            set(findobj(gcf,'Tag','radio_fouralltime'),'Enable','on');
-            set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'enable','on');
-            set(findobj(gcf,'Tag','headlines'),'enable','on');
-            set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
-            
-            
-            if nr_channel>1
-                set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-            end
-        end
-        %Electrode Selection
-        delete(findobj('Tag','S_Elektrodenauswahl'));
-        uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
-        SubmitSorting(1:size(RAW.M,2)) = zeros;
-        
-        preti = (0.5:1000/SaRa:2);
-        postti = (0.5:1000/SaRa:2);
-        
-        delete(findobj('Tag','S_pretime'));
-        delete(findobj('Tag','S_posttime'));
-        uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
+        % load data
+        filepath = [myPath filesep file];
+        flag_waitbar=1; % waitbar enabled
+        [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel] = read_dat(filepath, flag_waitbar);
         
         % Save Data in RAW structure
-        RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,RAW.M,T,rec_dur,fileinfo,nr_channel);
+        RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel);
+        
+        % set Settings
+        spiketraincheck = 0;
+        setSettingsAfterOpenFile;
         
     end
 
 % --- Import HDMEA Raw Data (Sh.Kh) ------------------------------------------
-    function ImportbrwFileCallback(~,~)
-        clear Energy Variance;
-        SPIKES3D = [];
-        SPIKES = [];
-        SPIKEZ = [];
-        M_OR = []; % used in function: SixWellButtonCallback
-        BURSTS.BEG = [];
-        BURSTS.END = [];
-        SubmitSorting = 0; % Sorting Variable is reset
-        SPIKES_Class = [];
-        ELEC_CHECK = [];
-        set(findobj('Tag','S_K_Nr','parent',t6),'String',0); % Cluster Number in Sorting tab is reset
-        clear BEGEND;
-        waitbar_counter = 0;
-        stimulidata     = false;
-        thresholddata   = false;
-        STIMULI_1       = 0;
-        STIMULI_2       = 0;
-        BEGEND          = 0;
-        BEG             = 0;
-        END             = 0;
-        cellselect      = 1;
-        handler;
-        Nr_SI_EVENTS    = 0;
-        Mean_SIB        = 0;
-        Mean_SNR_dB     = 0;
-        MBDae           = 0;
-        STDburstae      = 0;
-        aeIBImean       = 0;
-        aeIBIstd        = 0;
-        SI_EVENTS       = 0;
-        spikedata       = false;
-        EL_NUMS         = 0;
-        nr_channel      =0;
-        first_open      = false;
-        first_open4     = false;
-        spiketraincheck = false;
-        rawcheck        = false;
-        NR_SPIKES       = 0;
-        BURSTS.BRn      = 0;
-        THRESHOLDS      = 0;
-        kappa_mean      = 0;
-        threshrmsdecide = 1; %As Default setting use rms for threshold calculation
-        varT            = 0;
-        varTdata        = 0;
-        RAW             = 0;
-        rec_dur         = 0;
-        SaRa            = 0;
-        %     fileN           = 0;
-        T               = 0;
-        EL_NUMS         = 0;
-        PREF            = 0;
-        THRESHOLDS_pos  = 0;
-        AMPLITUDES      = [];
-        NETWORKBURSTS.BEG= 0;
-        drawnbefore4    = false;
-        drawnbeforeall  = false;
-        is_open         = false;
-        NCh             = 0;
-        HDspikedata     = false;
-        HDrowdata       = true;
-        if path ~= 0
-            cd(path)
+    function openFileBrw(file,myPath)
+        
+        % init variables
+        initVariablesBeforeOpenFile;
+        HDrawdata       = 1;
+        HDspikedata     = 0;
+        HDmode = 1;
+        
+        spiketraincheck = 0;
+        
+        if myPath ~= 0
+            cd(myPath)
         end
-        % % 'Open file' - Window
-        %     [file,path] = uigetfile({'*.brw','Raw data file (*.brw)'; ...
-        %                            },'Select one .brw-file with raw data.','MultiSelect','off');
-        %     if not(iscell(file)) && not(ischar(file)) % if canceled - dont do anything
-        %         return
-        %     end
-        % Import Data
-        MaxVolt = h5read(file,'/3BRecInfo/3BRecVars/MaxVolt');
-        f=msgbox('  Importing raw file ...');
+        
+        % read data
+        [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel,MaxVolt,MinVolt,BitDepth,SignalInversion]=read_brw(file,1);
+        
+        % Save Data in RAW structure
+        RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel);
+        RAW.MaxVolt = MaxVolt;
+        RAW.MinVolt = MinVolt;
+        RAW.BitDepth = BitDepth;
+        RAW.SignalInversion = SignalInversion;
+        
         set(0, 'currentfigure', mainWindow);  % set main window as current figure
         
-        data2 = h5read(file,'/3BData/Raw');
-        NRecFrames = h5read(file,'/3BRecInfo/3BRecVars/NRecFrames');
-        BitDepth = h5read(file,'/3BRecInfo/3BRecVars/BitDepth');
-        MinVolt = h5read(file,'/3BRecInfo/3BRecVars/MinVolt');
-        SamplingRate = h5read(file,'/3BRecInfo/3BRecVars/SamplingRate');
-        NCols = h5read(file,'/3BRecInfo/3BMeaChip/NCols');
-        NRows = h5read(file,'/3BRecInfo/3BMeaChip/NRows');
-        SignalInversion = h5read(file,'/3BRecInfo/3BRecVars/SignalInversion');
-        NCols=double(NCols);
-        NCh=double(NCols*NRows);
-        %NRecFrames = h5read (file,'/3BRecInfo/3BRecVars/NRecFrames');
-        Chs = h5read (file,'/3BRecInfo/3BMeaStreams/Raw/Chs');
-        BitDepth= double(BitDepth);
-        
-        %      %Convert Analog Values to Microvolt
-        %       m=double(m);
-        %       if MaxVolt==-MinVolt
-        %          m=SignalInversion*(m-(2^BitDepth)/2)*(MaxVolt*2/2^BitDepth);
-        %       end
-        
-        NRecFrames=double(NRecFrames);
-        rec_dur =double(NRecFrames/SamplingRate);
-        SaRa = fix(SamplingRate);
-        NRecFrames=double(NRecFrames);
-        T = 0:(1/SamplingRate):((NRecFrames-1)/SamplingRate);
-        j=0;
-        for i=1:NRows
-            Ch(1,(j+1):(j+NCols))=i;
-            j=j+NCols;
-        end
-        j=0;
-        for i=1:NRows
-            Ch(2,(j+1):(j+NCols))=1:NCols;
-            j=j+NCols;
-        end
-        for i=1:NCh
-            Ch(3,i)= ((Ch(1,i)-1)*64)+Ch(2,i);
-        end
-        ROW=Ch(1,:);
-        COL=Ch(2,:);
-        for i=1:NCh
-            s=strcat('El: ', num2str(ROW(i)), ',', num2str(COL(i)));
-            ss{i}=s;
-        end
-        %Ch=Ch'; % Ch(:,1)=ROW , Ch(:,2)=COL , Ch(:,3)=ChID
-        m=zeros(NRecFrames,NCh);
-        m= reshape(data2,[NCh,NRecFrames]);
-        m=m';
-        clear data2;
-        EL_NUMS=Ch(3,:);
-        EL_NAMES=ss;
-        temp.M= struct([]);
-        RAW=temp;
-        RAW.M=m;
-        RAW.T=T;
-        RAW.rec_dur=rec_dur;
-        RAW.SaRa=SaRa;
-        RAW.nr_channel=size(RAW.M,2);
-        RAW.EL_NAMES=EL_NAMES;
-        RAW.EL_NUMS=EL_NUMS;
-        RAW.Date=0;
-        RAW.Time=0;
-        RAW.fileinfo=0;
-        nr_channel=NCh;
-        RAW.nr_channel=nr_channel;
-        RAW.MaxVolt=MaxVolt;
-        RAW.MinVolt=MinVolt;
-        RAW.BitDepth=BitDepth;
-        RAW.SignalInversion=SignalInversion;
-        
         %Settings:
+        uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','9999','Tag','STD_noisewindow');
+        
         set(findobj(gcf,'Tag','CELL_dataFile'),'String',file);
         set(findobj(gcf,'Tag','CELL_dataSaRa'),'String',SaRa);
         set(findobj(gcf,'Tag','CELL_dataDate'),'String',Date);
@@ -3411,7 +2770,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
         end
         set(findobj(gcf,'Parent',t3,'Enable','off'),'Enable','on');
-        uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','9999','Tag','STD_noisewindow');
+        
         set(findobj(gcf,'Parent',t3,'Tag','CELL_sensitivityBox_pos'),'Enable','off');
         set(findobj(gcf,'Tag','CELL_filterCheckbox'),'Enable','on');
         set(findobj(gcf,'Tag','CELL_ZeroOutCheckbox'),'Enable','on');
@@ -3463,287 +2822,128 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
         uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
         
+        
         %redraw:
         HDredraw
         is_open = true;
         rawcheck = true;
-        delete(f)
-        msgbox('Your Data has been imported successfully','Success');
     end
 
 % --- Import HDF5 Spike Data (Sh.Kh) ------------------------------------------
-    function ImportbxrFileCallback(~,~)
+    function openFileBxr(file,myPath)
         
-        clear Energy Variance;
-        SPIKES3D = [];
-        SPIKES = [];
-        SPIKEZ = [];
-        M_OR = []; % used in function: SixWellButtonCallback
-        BURSTS.BEG = [];
-        BURSTS.END = [];
-        SubmitSorting = 0; % Sorting Variable is reset
-        SPIKES_Class = [];
-        set(findobj('Tag','S_K_Nr','parent',t6),'String',0); % Cluster Number in Sorting tab is reset
+        % init variables
+        initVariablesBeforeOpenFile;
+        HDrawdata       = 0;
+        HDspikedata     = 1;
+        HDmode = 1;
         
-        clear BEGEND;
-        waitbar_counter = 0;
-        stimulidata     = false;
-        thresholddata   = false;
-        STIMULI_1       = 0;
-        STIMULI_2       = 0;
-        BEGEND          = 0;
-        BEG             = 0;
-        END             = 0;
-        cellselect      = 1;
-        handler;
-        Nr_SI_EVENTS    = 0;
-        Mean_SIB        = 0;
-        Mean_SNR_dB     = 0;
-        MBDae           = 0;
-        STDburstae      = 0;
-        aeIBImean       = 0;
-        aeIBIstd        = 0;
-        SI_EVENTS       = 0;
-        spikedata       = false;
-        EL_NUMS         = 0;
-        nr_channel      = 0;
-        first_open      = false;
-        first_open4     = false;
-        spiketraincheck = true;
-        rawcheck        = false;
-        NR_SPIKES       = 0;
-        BURSTS.BRn      = 0;
-        THRESHOLDS      = 0;
-        kappa_mean      = 0;
-        threshrmsdecide = 1; %As Default setting use rms for threshold calculation
-        varT            = 0;
-        varTdata        = 0;
-        RAW             = 0;
-        rec_dur         = 0;
-        SaRa            = 0;
-        T               = 0;
-        EL_NUMS         = 0;
-        PREF            = 0;
-        THRESHOLDS_pos  = 0;
-        AMPLITUDES      = [];
-        NETWORKBURSTS.BEG= 0;
-        drawnbefore4    = false;
-        drawnbeforeall  = false;
-        is_open         = false;
-        NCh             = 0;
-        HDspikedata     = true;
-        HDrowdata       = 0;
-        if path ~= 0
-            cd(path)
+        spiketraincheck = 1;
+        
+        if myPath ~= 0
+            cd(myPath)
         end
         
-        % 'Open file' - Window
-        %         [file,path] = uigetfile({'*.bxr','ST file (*.bxr)'; ...
-        %                                 },'Select one .bxr-file with Spike data.','MultiSelect','off');
-        %         if not(iscell(file)) && not(ischar(file)) % if canceled - dont do anything
-        %             return
-        %         end
+        % read data
+        [TS,TSC,Date,Time,SaRa,EL_NAMES,EL_NUMS,T,rec_dur,fileinfo,nr_channel,ChIDs2NSpikes] = read_bxr(file,1);
         
-        % Import Spike Data
-        %MaxVolt = h5read(file,'/3BRecInfo/3BRecVars/MaxVolt');
-        %MinVolt = h5read(file,'/3BRecInfo/3BRecVars/MinVolt');
-        f=msgbox('  Importing Spiketrain file ...');
         set(0, 'currentfigure', mainWindow);  % set main window as current figure
-        SpikeChIDs=h5read(file,'/3BResults/3BChEvents/SpikeChIDs');
-        SpikeTimes=h5read(file,'/3BResults/3BChEvents/SpikeTimes');
-        MeaChs2ChIDsMatrix=h5read(file,'/3BResults/3BInfo/MeaChs2ChIDsMatrix');
-        %ChIDs2Labels=h5read(file,'/3BResults/3BInfo/ChIDs2Labels');
-        ChIDs2NSpikes=h5read(file,'/3BResults/3BInfo/3BSpikes/ChIDs2NSpikes');
-        NRecFrames=h5read(file,'/3BRecInfo/3BRecVars/NRecFrames');
-        SamplingRate=h5read(file,'/3BRecInfo/3BRecVars/SamplingRate');
-        %BitDepth = h5read(file,'/3BRecInfo/3BRecVars/BitDepth');
-        NCols = h5read(file,'/3BRecInfo/3BMeaChip/NCols');
-        NRows = h5read(file,'/3BRecInfo/3BMeaChip/NRows');
-        NCols=double(NCols);
-        NCh=double(NCols*NRows);   % EL#
         
-        % Create El_NUMS and EL_NAMES
-        j=0;
-        for i=1:NRows %
-            Ch(1,(j+1):(j+NCols))=i;
-            j=j+NCols;
-        end
-        j=0;
-        for i=1:NRows
-            Ch(2,(j+1):(j+NCols))=1:NCols;
-            j=j+NCols;
-        end
-        for i=1:NCh
-            Ch(3,i)= ((Ch(1,i)-1)*64)+Ch(2,i);
-        end
-        ROW=Ch(1,:);
-        COL=Ch(2,:);
-        for i=1:NCh
-            s=strcat('El: ', num2str(ROW(i)), ',', num2str(COL(i)));
-            ss{i}=s;
-        end
-        
-        EL_NUMS=Ch(3,:);
-        EL_NAMES=ss;
-        %        Ch=Ch'; % Ch(:,1)=ROW , Ch(:,2)=COL , Ch(:,3)=ChID
-        
-        % Create Cell Array
-        TSC={};
-        for i=1:NCh
-            a=find(SpikeChIDs==i-1);%  CH nummer ( 0 bis 4095 ) ist
-            for ii=1:size(a,1)
-                b(ii,1)=SpikeTimes(a(ii,1));
-            end
-            if size(a,1)>0
-                b=double(b);
-                b= (b/SamplingRate);
-                TSC(1,i)={b};
-            end
-            a=0;
-            b=0;
-        end
-        
-        % Create TS for Spikes Sh.Kh
-        %MeaChs2ChIDsMatrix2=MeaChs2ChIDsMatrix';
-        %SPIKESHD=zeros(max(ChIDs2NSpikes),NCh);
-        for i=1:NCh
-            a=find(SpikeChIDs==i-1); %  CH nummer ( 0 bis 4095 ) ist
-            for ii=1:size(a,1)
-                TS(ii,i)=SpikeTimes(a(ii,1));
-            end
-        end
-        TS= double(TS/SamplingRate);
+        % create structure
         temp.M= struct([]);
         RAW=temp;
-        NRecFrames=double(NRecFrames);
-        T = 0:(1/SamplingRate):((NRecFrames-1)/SamplingRate);
         RAW.T=T;
-        rec_dur=double(NRecFrames/SamplingRate);
-        SaRa=fix(SamplingRate);
         SPIKEZ.TS=TS;
         SPIKEZ.TSC=TSC;
         SPIKEZ.N=ChIDs2NSpikes;
         SPIKEZ.PREF.rec_dur=rec_dur;
         SPIKEZ.PREF.nr_channel = NCh;
-        nr_channel = SPIKEZ.PREF.nr_channel;
-        SPIKEZ.PREF.fileinfo='';
+        SPIKEZ.PREF.fileinfo=fileinfo;
         fileinfo = SPIKEZ.PREF.fileinfo;
-        SPIKEZ.AMP = [];
+        SPIKEZ.AMP = ~isnan(TS);
         SPIKEZ.neg.flag=1;
         SPIKEZ.pos.flag=0;
         SPIKEZ.neg.TS=TS;
         SPIKEZ.neg.AMP=SPIKEZ.AMP;
-        SPIKEZ=SpikeParameterCalculation(SPIKEZ);
+        SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
         % old_parameter
         temp.M= struct([]);
         SPIKES=temp;
         SPIKES=SPIKEZ.TS; % SPIKES, AMPLITUDES, rec_dur, SaRa, EL_NUMS, optional: fileinfo, Time, Date
         NR_SPIKES=SPIKEZ.N;
         
-        % Settings:
+        setSettingsAfterOpenFile()
         
-        set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
-        set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
-        set(findobj(gcf,'Parent',t2,'Enable','on'),'Enable','off');
-        set(findobj(gcf,'Parent',t5),'Enable','on');
-        set(findobj(gcf,'Parent',t6),'Enable','on');
-        set(findobj(gcf,'Parent',t7),'Enable','on');
-        set(findobj(gcf,'Tag','Spike_Box'),'value',0,'Enable','off');
-        set(findobj(gcf,'Tag','Spike2_Box'),'value',0,'Enable','off');
-        set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
-        set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_scaleBox'),'value',2,'Enable','on');
-        set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_DefaultBox'),'Enable','on');
-        set(findobj(gcf,'Parent',radiogroup2),'Enable','off');
-        set(findobj(gcf,'Parent',radiogroup3),'Enable','off');
-        set(findobj(gcf,'Tag','Manual_threshold'),'Enable','off')
-        set(findobj(gcf,'Tag','time_start'),'Enable','off');
-        set(findobj(gcf,'Tag','time_end'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_sensitivityBox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
-        set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
-        set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
-        set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
-        set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
-        
-        if nr_channel>1
-            set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-        end
-        
-        % Electrode Selection
-        delete(findobj('Tag','S_Elektrodenauswahl'));
-        uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
-        SubmitSorting(1:nr_channel) = zeros;
-        
-        preti = (0.5:1000/SaRa:2);
-        postti = (0.5:1000/SaRa:2);
-        
-        delete(findobj('Tag','S_pretime'));
-        delete(findobj('Tag','S_posttime'));
-        uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        
-        HDredraw
-        is_open = true;
-        rawcheck = true;
-        delete(f)
-        msgbox('Your Data has been imported successfully','Success');
+%         % Settings:
+%         set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
+%         set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
+%         set(findobj(gcf,'Parent',t2,'Enable','on'),'Enable','off');
+%         set(findobj(gcf,'Parent',t5),'Enable','on');
+%         set(findobj(gcf,'Parent',t6),'Enable','on');
+%         set(findobj(gcf,'Parent',t7),'Enable','on');
+%         set(findobj(gcf,'Tag','Spike_Box'),'value',0,'Enable','off');
+%         set(findobj(gcf,'Tag','Spike2_Box'),'value',0,'Enable','off');
+%         set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
+%         set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_scaleBox'),'value',2,'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_DefaultBox'),'Enable','on');
+%         set(findobj(gcf,'Parent',radiogroup2),'Enable','off');
+%         set(findobj(gcf,'Parent',radiogroup3),'Enable','off');
+%         set(findobj(gcf,'Tag','Manual_threshold'),'Enable','off')
+%         set(findobj(gcf,'Tag','time_start'),'Enable','off');
+%         set(findobj(gcf,'Tag','time_end'),'Enable','off');
+%         set(findobj(gcf,'Tag','CELL_sensitivityBox'),'Enable','off');
+%         set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'Enable','off');
+%         set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
+%         set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
+%         set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
+%         set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
+%         set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
+%         set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
+%         set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
+%         set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
+%         
+%         if nr_channel>1
+%             set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
+%         end
+%         
+%         % Electrode Selection
+%         delete(findobj('Tag','S_Elektrodenauswahl'));
+%         uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
+%         SubmitSorting(1:nr_channel) = zeros;
+%         
+%         preti = (0.5:1000/SaRa:2);
+%         postti = (0.5:1000/SaRa:2);
+%         
+%         delete(findobj('Tag','S_pretime'));
+%         delete(findobj('Tag','S_posttime'));
+%         uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
+%         uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
+%         
+%         
+%         HDredraw
+%         is_open = true;
+%         rawcheck = true;
     end
 
 % --- Open McRack-file (exported into ASCII) (CN)------------------
-    function openMcRackButtonCallback(source,event) %#ok<INUSD>
+    function openFileMcRack(file,myPath)
         
         
-        clear BEGEND;
-        waitbar_counter = 0;
-        stimulidata     = false;
-        thresholddata   = false;
-        STIMULI_1       = 0;
-        STIMULI_2       = 0;
-        BEGEND          = 0;
-        BEG             = 0;
-        END             = 0;
-        cellselect      = 1;
-        Nr_SI_EVENTS    = 0;
-        Mean_SIB        = 0;
-        Mean_SNR_dB     = 0;
-        MBDae           = 0;
-        STDburstae      = 0;
-        aeIBImean       = 0;
-        aeIBIstd        = 0;
-        SPIKES          = 0;
-        BURSTS.BEG          = 0;
-        SI_EVENTS       = 0;
-        spikedata       = false;
-        % M               = 0;
-        EL_NUMS         = 0;
-        first_open      = false;
-        first_open4     = false;
-        spiketraincheck = false;
-        rawcheck        = false;
-        NR_SPIKES       = 0;
-        BURSTS.BRn       = 0;
-        THRESHOLDS      = 0;
-        kappa_mean      = 0;
-        threshrmsdecide = 1; %As Default setting use rms for threshold calculation
+        % init variables
+        initVariablesBeforeOpenFile;
         
         % 'Open McRack-File' - Menu
-        [file,path] = uigetfile({'*.txt','Data file (*.txt)'},'Open McRack file...');
-        if file==0,return,end
-        full_path = [path,file];
+        full_path = [myPath,file];
         disp ('Importing McRack file:'); tic
         h = waitbar(0,'Please wait - importing McRack file...');
-        fid = fopen([path file]);
+        fid = fopen([myPath file]);
         
         fseek(fid,0,'eof');
         filesize = ftell(fid);
@@ -3870,6 +3070,96 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         rawcheck = true;
     end
 
+% --- Export File (MC) --------------------------------------------
+    function exportButtonCallback(~,~)
+        
+        % 'Open file' - Window
+        [filename,myPathname] = uiputfile();
+        
+        if not(iscell(filename)) && not(ischar(filename)) % if canceled - dont do anything
+            return
+        end
+        
+        filepath = [myPathname filename];
+        
+        [p,f,e]=fileparts(filepath);
+        filename = [p filesep f];
+
+        saveRAW(RAW, filename)
+    end
+
+% --- Quick Neuro Analysis (MC) -----------------------------------------
+    function quickNeuroAnalysisButtonCallback(~,~)
+        
+        disp('------ QUICK NEURO ANALYIS ---------')
+        
+        % Filter 
+        if ~isAlreadyFiltered
+            Applyfilter(); 
+        else
+            disp('Raw data already filtered')
+        end 
+        
+        CalculateThreshold(); % same function call as pressing button "Calculate" (tab 3)
+        Analysedecide(); % same function call as pressing button "Analyze..." (tab 4)
+        
+        disp('------ QUICK NEURO ANALYIS finished ---------')
+    end
+
+% --- Quick Cardio Analysis (MC) -----------------------------------------
+    function quickCardioAnalysisButtonCallback(~,~)
+        
+        disp('------ QUICK CARDIO ANALYIS ---------')
+        
+        % Filter 
+        if ~isAlreadyFiltered
+            Applyfilter(); 
+        else
+            disp('Raw data already filtered')
+        end 
+        
+        spikedata = 0;
+        CalculateThreshold(); % same function call as pressing button "Calculate" (tab 3)
+        
+        % Detect spikes with 200 ms refractory time setting (hard coded in
+        % cardioSpikedetection function)
+        SPIKEZ.PREF.flag_isHDMEAmode = HDmode;
+        SPIKEZ.PREF.idle_time = 0.2; % refractory time 200 ms
+        SPIKEZ = cardioSpikedetection(RAW,SPIKEZ);  
+        
+        spikedata = true;
+        set(findobj(gcf,'Parent',t5),'Enable','on');
+        set(findobj(gcf,'Parent',t6),'Enable','on');
+        set(findobj(gcf,'Parent',t7),'Enable','on');
+        disp('Spikedetection finished')
+                
+
+        
+        
+        % calculate signal speed
+        [velocity_airline,velocity_min_mean,velocity_max_mean] = cardioCalculateSpeed(SPIKEZ);
+        disp('---')
+        for i = 1 : length(velocity_airline)
+            disp(['Velocity (air line) in m/s: ' num2str(velocity_airline(i))])
+        end
+        disp('---')
+        for i = 1 : length(velocity_min_mean)
+            disp(['Velocity_min (mean over neighboring electrodes) in m/s: ' num2str(velocity_min_mean(i))])
+        end
+        disp('---')
+        for i = 1 : length(velocity_max_mean)
+            disp(['Velocity_max (mean over neighboring electrodes) in m/s: ' num2str(velocity_max_mean(i))])
+        end
+        
+        [SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=copySpikesIntoOldStructure(SPIKEZ);
+        %[SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=cardioCopySpikesIntoOldStructure(SPIKEZ);
+        
+        redrawdecide()
+       disp('------ QUICK CARDIO ANALYIS finished ---------')
+        
+    end
+
+
 % --- 6-Well-View (MC) --------------------------------------------
     function SixWellButtonCallback(source,event) % clear all electrodes except of selected chamber
         if isempty(M_OR)
@@ -3979,8 +3269,8 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
 
 % --- Convert txt to _TS.mat (MC) ------------------------------------------
     function txt2TSButtonCallback(source,event) % select several TimeAmp.txt-Files and convert it to .mat
-        if ~isempty(path)
-            cd(path)
+        if ~isempty(myPath)
+            cd(myPath)
         end
         
         % "Open directory" Window
@@ -3998,7 +3288,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         [dirarray,files]=subdir(dir_name);
         
         
-        path=dirarray{1};
+        myPath=dirarray{1};
         
         number_of_files=0;
         for i=1:size(files,2)
@@ -4143,8 +3433,8 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
 % --- Convert .dat files to .mat (MC) ------------------------------------------
     function convertDat2MatButtonCallback(~,~) % convert raw-file .dat to .mat
         
-        if ~isempty(path) && ischar(path)
-            cd(path)
+        if ~isempty(myPath) && ischar(myPath)
+            cd(myPath)
         end
         
         % "Open directory" Window
@@ -4167,7 +3457,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         end
         
         
-        path=dirarray{1};
+        myPath=dirarray{1};
         
         number_of_files=0;
         for i=1:size(files,2)
@@ -4197,7 +3487,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                     
                     filepath = [current_dir filesep current_file];
                     flag_waitbar = 1; % if 1: display waitbar
-                    [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel] = load_dat(filepath, flag_waitbar);
+                    [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel] = read_dat(filepath, flag_waitbar);
                     temp = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel);
                     
                     saveRAW(temp, [current_dir filesep current_file])
@@ -4310,7 +3600,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             MM = filter(Hd,MM);
         else
             j=1;  % bei kleinem Arbeitsspeicher muss j kleiner werden
-            if HDrowdata ==1     % for .brw Data
+            if HDrawdata ==1     % for .brw Data
                 for i=0:+j:(floor(numel(MM(1,:))/j)-1)*j
                     m=(MM(:,i+1:i+j));
                     m=digital2analog_sh(m,RAW);
@@ -4342,70 +3632,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         RAW.M=MM;
     end
 
-% --- bandstop filter (Sh.Kh)----------------------------------------------
-    function bandstop(~)
-        MM=RAW.M;
-        waitbar_counter = waitbar_counter + waitbaradd;
-        waitbar(waitbar_counter);
-        if str2double(get(findobj('Tag','CELL_low_edit'),'string'))== 0 % in case that lower boundary equals zero use highpass instead of bandstop
-            [z,p,k] = cheby2(3,20,str2double(get(findobj('Tag','CELL_high_edit'),'string'))*2/SaRa,'high');
-            [sos,g] = zp2sos(z,p,k);			% Convert to SOS form
-            Hd = dfilt.df2tsos(sos,g);
-        else
-            [z,p,k] = cheby2(3,20,[str2double(get(findobj('Tag','CELL_low_edit'),'string'))*2/SaRa str2double(get(findobj('Tag','CELL_high_edit'),'string'))*2/SaRa],'stop');
-            [sos,g] = zp2sos(z,p,k);			% Convert to SOS form
-            Hd = dfilt.df2tsos(sos,g);
-        end
-        if size(MM,2)<=60    %for .mat Data
-            MM = filter(Hd,MM);
-        else
-            [~,systemview] = memory;
-            if systemview.PhysicalMemory.Total>=((3/4)*systemview.PhysicalMemory.Available)% When enough memory is available
-                j=1200;
-            else
-                j=1;
-            end% bei kleinem Arbeitsspeicher muss j kleiner werden
-            if HDrowdata ==1   || size(MM,2)>60  % for .brw Data
-                for i=0:+j:(floor(numel(MM(1,:))/j)-1)*j
-                    if HDrowdata ==1
-                        m=digital2analog_sh(MM(:,i+1:i+j),RAW);
-                        m(m<-4000)=0;
-                        m(m>4000)=0;
-                        m=(filter(Hd,m));
-                        m=RAW.SignalInversion*(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
-                        MM(:,i+1:i+j)=m;
-                    else %for .mat Data mit  El > 60
-                        m = MM(:,i+1:i+j);
-                        m = filter(Hd,m);
-                        MM(:,i+1:i+j) = single(m);
-                    end
-                end
-                i=i+j;
-                if i<size(MM,2)
-                    clear m;
-                    if HDrowdata ==1
-                        m=(MM(:,i+1:size(MM,2)));
-                        m=digital2analog_sh(m,RAW);
-                        m(m<-4000)=0;
-                        m(m>4000)=0;
-                        m=(filter(Hd,m));
-                        m=(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
-                        MM(:,i+1:size(MM,2))=m;
-                    else %for .mat Data mit  El > 60
-                        m=(MM(:,i+1:size(MM,2)));
-                        m = filter(Hd,m);
-                        MM(:,i+1:size(MM,2))=m;
-                    end
-                end
-            end
-        end
-        if stimulidata == 1
-            for n = 1:(length(BEG))
-                MM((int32(BEG(n)*SaRa)):(int32(END(n)*SaRa)),:) = 0;
-            end
-        end
-        RAW.M=MM;
-    end
+
 
 % --- bandstop filter (RB)----------------------------------------------
     function notchfilter(~,~)
@@ -4424,7 +3651,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         end
     end
 
-d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
+%d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
 
 % --- Zero Out on/off (CN)---------------------------------------------
     function onofffkt(source,event)%#ok
@@ -4617,14 +3844,20 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             h_wait = waitbar(0,'Please Wait - busy...');
         end
         
+        waitbar(1); close(h_wait);
+        waitbar_counter=0;
+        
         if str2double(get(findobj('Tag','CELL_low_edit'),'string')) == str2double(get(findobj('Tag','CELL_high_edit'),'string')) % use notch filter if upper and lower boundary have the same value
             notchfilter;
             SPIKEZ.FILTER.Name='notchfilter';
         else
             if PREF(12)
-                %RAW.M = bandstop(RAW);
-                bandstop;
-                SPIKEZ.FILTER.Name='bandstop';
+                f_edge = str2double(get(findobj('Tag','CELL_high_edit'),'string'));
+                lowerBoundary = str2double(get(findobj('Tag','CELL_low_edit'),'string'));
+                flag_waitbar = 1;
+                [RAW,filterName,f_edge] = bandstop(RAW,f_edge,SaRa,HDrawdata,flag_waitbar,stimulidata,lowerBoundary);
+                SPIKEZ.FILTER.Name = filterName;
+                SPIKEZ.FILTER.f_edge = f_edge;
             end
             
             if PREF(13)
@@ -4634,8 +3867,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             end
         end
         
-        waitbar(1); close(h_wait);
-        waitbar_counter=0;
+        
         
         if stimulidata
             figure (mainWindow);
@@ -4647,14 +3879,17 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             END = 0;
         end
         redrawdecide; % shiva%
+        
+        isAlreadyFiltered = true;
+        
     end
 
 % --- Zero Els - Popup-Menu (CN)---------------------------------------
     function ELnullenCallback(source,event) %#ok<INUSD>
         allorone = 0;
         fh = figure('Units','Pixels','Position',[350 400 300 280],'Name','select electrodes','NumberTitle','off','Toolbar','none','Resize','off','menubar','none');
-        uicontrol('Parent',fh,'style','text','units','Pixels','position', [20 155 265 100],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'String','the signal of the selected electrodes is clear for the entire recording time. More than one electrode have to be separated be space.');
-        uicontrol('Parent',fh,'style','text','units','Pixels','position', [20 120 80 20],'HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'Tag','CELL_electrodeLabel','String','electrode');
+        uicontrol('Parent',fh,'style','text','units','Pixels','position', [20 155 265 100],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'String','the signal of the selected electrodes is clear for the entire recording time. More than one electrode have to be separated by space.');
+        uicontrol('Parent',fh,'style','text','units','Pixels','position', [20 120 80 20],'HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'Tag','CELL_electrodeLabel','String','electrode');
         uicontrol('Parent',fh,'style','edit','units','Pixels','position', [20 100 260 20],'HorizontalAlignment','left','FontSize',9,'FontSize',9,'Tag','CELL_electrode','string','');
         uicontrol(fh,'Style','PushButton','Units','Pixels','Position',[175 20 110 50],'String','apply','ToolTipString','clears the signals of selected electrodes now','CallBack',@ELnullencallfunction);
         uicontrol(fh,'Style','PushButton','Units','Pixels','Position',[20 20 110 50],'String','all or none','ToolTipString','clears the signals of selected electrodes now','CallBack',@Allornonecallfunction);
@@ -4712,8 +3947,8 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function invertButtonCallback(source,event) %#ok<INUSD>
         allorone = 0;
         fh2 = figure('Units','Pixels','Position',[350 400 300 280],'Name','select electrodes','NumberTitle','off','Toolbar','none','Resize','off','menubar','none');
-        uicontrol('Parent',fh2,'style','text','units','Pixels','position', [20 155 265 100],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'String','the signal of the selected electrodes is inverted for the entire recording time. More than one electrode have to be separated be space.');
-        uicontrol('Parent',fh2,'style','text','units','Pixels','position', [20 120 80 20],'HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'Tag','CELL_electrodeLabel','String','electrode');
+        uicontrol('Parent',fh2,'style','text','units','Pixels','position', [20 155 265 100],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'String','the signal of the selected electrodes is inverted for the entire recording time. More than one electrode have to be separated be space.');
+        uicontrol('Parent',fh2,'style','text','units','Pixels','position', [20 120 80 20],'HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'Tag','CELL_electrodeLabel','String','electrode');
         uicontrol('Parent',fh2,'style','edit','units','Pixels','position', [20 100 260 20],'HorizontalAlignment','left','FontSize',9,'FontSize',9,'Tag','CELL_electrode','string',EL_invert_Auswahl);
         uicontrol(fh2,'Style','PushButton','Units','Pixels','Position',[175 20 110 50],'String','apply','ToolTipString','clears the signals of selected electrodes now','CallBack',@ELinvertcallfunction);
         uicontrol(fh2,'Style','PushButton','Units','Pixels','Position',[20 20 110 50],'String','all or none','ToolTipString','clears the signals of selected electrodes now','CallBack',@Allornonecallfunction);
@@ -4756,12 +3991,12 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function smoothButtonCallback(~,~)
         allorone = 0;
         fh3 = figure('Units','Pixels','Position',[350 400 300 280],'Name','select electrodes','NumberTitle','off','Toolbar','none','Resize','off','menubar','none');
-        uicontrol('Parent',fh3,'style','text','units','Pixels','position', [20 155 265 100],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'String','the signal of the selected electrodes is smoothed for the entire recording time. More than one electrode have to be separated be space.');
-        uicontrol('Parent',fh3,'style','text','units','Pixels','position', [20 120 80 20],'HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',9,'Tag','CELL_electrodeLabel','String','electrode');
+        uicontrol('Parent',fh3,'style','text','units','Pixels','position', [20 155 265 100],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'String','the signal of the selected electrodes is smoothed for the entire recording time. More than one electrode have to be separated be space.');
+        uicontrol('Parent',fh3,'style','text','units','Pixels','position', [20 120 80 20],'HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'Tag','CELL_electrodeLabel','String','electrode');
         uicontrol('Parent',fh3,'style','edit','units','Pixels','position', [20 100 260 20],'HorizontalAlignment','left','FontSize',9,'FontSize',9,'Tag','CELL_electrode','string','');
         uicontrol(fh3,'Style','PushButton','Units','Pixels','Position',[175 10 110 50],'String','apply','ToolTipString','clears the signals of selected electrodes now','CallBack',@ELsmoothcallfunction);
         uicontrol(fh3,'Style','PushButton','Units','Pixels','Position',[20 10 110 50],'String','all or none','ToolTipString','clears the signals of selected electrodes now','CallBack',@Allornonecallfunction);
-        uicontrol('Parent',fh3,'Style', 'text','Position', [20 65 90 21],'HorizontalAlignment','left','String','Smoothing Nr.:','Enable','on','FontSize',9,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',fh3,'Style', 'text','Position', [20 65 90 21],'HorizontalAlignment','left','String','Smoothing Nr.:','Enable','on','FontSize',9,'BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',fh3,'Units','Pixels','Position', [110 68 20 21],'Tag','smooth_Nr','HorizontalAlignment','right','FontSize',8,'Enable','on','Value',1,'String',1,'Style','edit');
     end
 
@@ -4803,9 +4038,17 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     end
 
 % --- preprocessing empty ---------------------------------------------
-    function preprocessingempty1Callback(~,~)
+    function partClearCallback(~,~)
         
-        msgbox('coming soon ;)','Out of order');
+        t_1 = str2num(cell2mat(inputdlg('Delete raw signal on all electrodes between t1 and t2. Enter t1 in seconds: ')));
+        t_2 = str2num(cell2mat(inputdlg('Delete raw signal on all electrodes between t1 and t2. Enter t2 in seconds: ')));
+        
+        s_1 = int32(t_1*SaRa);
+        s_2 = int32(t_2*SaRa);
+        
+        RAW.M(s_1:s_2,:)=0;
+        
+        redrawdecide;
         
     end
 
@@ -4937,188 +4180,44 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
 % --- Calculate Button - Calculate Threshold (CN)----------------------
     function CalculateThreshold(~,~)
         
-        THRESHOLDS = 0;
-        ELEC_CHECK = 0;
-        waitbar_counter2 = 0.05;
+        thresholddata = false;
+        
+        % fill vector PREF (old code)
         PREF(1) = str2double(get(findobj(gcf,'Tag','CELL_sensitivityBox'),'string')); % Threshold
         ST=str2double(get(findobj(gcf,'Tag','STD_noisewindow'),'string'));
         PREF(15) =ST(1);
         % PREF(15) = str2double(get(findobj(gcf,'Tag','STD_noisewindow'),'string'));              %get value for STD to find spike-free windows
         PREF(16) = str2double(get(findobj(gcf,'Tag','Size_noisewindow'),'string'))/1000;       %get windowsize to find spike-free windows
         PREF(17) = str2double(get(findobj(gcf,'Tag','CELL_sensitivityBox_pos'),'string'));       %get factor for positive threshold
+
+        Std_noisewindow=PREF(15);
+        Size_noisewindow=PREF(16);
+        Multiplier_neg=PREF(1);
+        Multiplier_pos=PREF(17);
+        win_beg=PREF(2);
+        win_end=PREF(3);
         
-        % save parameter in spiketrain file:
-        SPIKEZ.neg.THRESHOLDS.Multiplier=PREF(1);
-        SPIKEZ.neg.THRESHOLDS.Std_noisewindow=PREF(15);
-        SPIKEZ.neg.THRESHOLDS.Size_noisewindow=PREF(16);
+        % call function to calculate threshold
+        tmp = get(findobj(Window,'Tag','negThCheckbox'),'Value');
+        SPIKEZ.neg.flag = tmp(1); % necessary if more than one instance of DrCell is opended (MC)
+        tmp = get(findobj(Window,'Tag','posThCheckbox'),'Value');
+        SPIKEZ.pos.flag = tmp(1); % same as above
+        flag_waitbar=1;
+        [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
         
-        SPIKEZ.pos.THRESHOLDS.Multiplier=PREF(17);
-        SPIKEZ.pos.THRESHOLDS.Std_noisewindow=PREF(15);
-        SPIKEZ.pos.THRESHOLDS.Size_noisewindow=PREF(16);
+        % calc SNR
+        SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
         
-        % init
-        SPIKEZ.neg.THRESHOLDS.Th=[];
-        SPIKEZ.pos.THRESHOLDS.Th=[];
-        
-        h_wait = waitbar(.05,'Please wait - Thresholds are calculated...');
-        multiplier = PREF(1);
-        disp ('Calculating thresholds');
-        
-        window_beg = 0.01*SaRa+1;
-        window_end = (0.01+PREF(16))*SaRa;
-        nr_win = 0;
-        calc_beg = 1;
-        calc_end = PREF(16)*SaRa;
-        
-        CALC = zeros((2*SaRa),(size(RAW.M,2)));
-        SNR = zeros(1,size(RAW.M,2));
-        SNR_dB = zeros(1,size(RAW.M,2));
-        
-        if auto
-            for n=1:size(RAW.M,2)
-                if  HDrowdata==1 %Sh_Kh for .brw Data
-                    m = digital2analog_sh(RAW.M(:,n),RAW);
-                else
-                    m=RAW.M;
-                end
-                while nr_win < (2/PREF(16))             % use two secondes of the signal
-                    
-                    %calculate STD in windows
-                    if  HDrowdata==1 %Sh.Kh for .brw Data
-                        [~,sigma] = normfit(m(window_beg:window_end)); %if you have the Statistics-Toolbox you can use "normfit" as well
-                    else
-                        [~,sigma] = normfit(m(window_beg:window_end,n)); %if you have the Statistics-Toolbox you can use "normfit" as well
-                    end
-                    if((sigma < PREF(15)) && (sigma > 0))
-                        if  HDrowdata==1 %Sh.Kh for .brw Data
-                            CALC(calc_beg:calc_end,n) = m(window_beg:window_end);
-                        else
-                            CALC(calc_beg:calc_end,n) = m(window_beg:window_end,n);
-                        end
-                        calc_beg = calc_beg + PREF(16)*SaRa;
-                        calc_end = calc_end + PREF(16)*SaRa;
-                        window_beg = window_beg + PREF(16)*SaRa;
-                        window_end = window_end + PREF(16)*SaRa;
-                        
-                        if window_end>size(T,2) break; end %#ok
-                        ELEC_CHECK(n) = 1;
-                        nr_win = nr_win + 1;
-                    else
-                        window_beg = window_beg + PREF(16)/2*SaRa;
-                        window_end = window_end + PREF(16)/2*SaRa;
-                        
-                        if window_end>size(T,2) break; end %#ok
-                        if ((window_beg > 0.5*size(T,2)) && (nr_win == 0))
-                            ELEC_CHECK(n) = 0; %noisy
-                            break
-                        end
-                    end
-                end
-                
-                nr_win = 0;
-                window_beg = 0.01*SaRa+1;
-                window_end = (0.01+PREF(16))*SaRa;
-                calc_beg = 1;
-                calc_end = PREF(16)*SaRa;
-                if HDrowdata ==1 || size(RAW.M,2)>60
-                    if n==1000 || n==2000 || n==3000 || n==4000
-                        waitbar_counter2 = waitbar_counter2+n*(0.7/nr_channel);
-                        waitbar(waitbar_counter2,h_wait);
-                    end
-                else
-                    waitbar_counter2 = waitbar_counter2+(0.7/nr_channel);
-                    waitbar(waitbar_counter2,h_wait);
-                end
-                if HDrowdata==0; break; end
-            end
-            COL_RMS = sqrt(mean(CALC.^2));
-            COL_SDT = std(CALC);
-            
-        elseif auto == 0                    %Manu
-            waitbar(.6,h_wait,'Please wait - Thresholds are calculated...');
-            for n=1:size(RAW.M,2)
-                if  HDrowdata==1 %Sh.Kh for .brw Data
-                    m = digital2analog_sh(RAW.M(:,n),RAW);
-                else
-                    m = RAW.M;
-                end
-                if (PREF(3)-rec_dur<1) && (PREF(2) == 0)
-                    COL_RMS = sqrt(mean(m.^2));                 % RMS
-                    COL_SDT = std(m);
-                else
-                    start = PREF(2)*SaRa+1;
-                    finish = PREF(3)*SaRa;
-                    COL_RMS = sqrt(mean(m(start:finish,:).^2)); % RMS
-                    COL_SDT = std(m(start:finish,:));
-                end
-                if HDrowdata==0; break; end
-            end
+        % Settings
+        if SPIKEZ.neg.flag || SPIKEZ.pos.flag
+            thresholddata = true;
         end
-        
-        if threshrmsdecide
-            THRESHOLDS = -multiplier.*COL_RMS;
-        else
-            THRESHOLDS = -multiplier.*COL_SDT;
-        end
-        
-        %new vectorize Sh.Kh
-        ECH=find(ELEC_CHECK==0);
-        for n=1:size(ECH,2)
-            THRESHOLDS(ECH(n))=10000;
-        end
-        %alt codes
-        %         for n=1:size(THRESHOLDS,2)
-        %             if ELEC_CHECK(n)== 0
-        %                 THRESHOLDS(n) = 10000;
-        %             end
-        %         end
-        
-        % MC: calculate positive thresholds
-        flag_positive = get(findobj(Window,'Tag','posThCheckbox'),'Value');
-        if flag_positive(1) == 1
-            
-            waitbar(.5,h_wait,'Please wait - positive thresholds are calculated...');
-            multiplier = PREF(17);
-            
-            if threshrmsdecide
-                THRESHOLDS_pos = multiplier.*COL_RMS;
-            else
-                THRESHOLDS_pos = multiplier.*COL_SDT;
-            end
-            
-            %new vectorize Sh.Kh
-            ECH=find(ELEC_CHECK==0);
-            for n=1:size(ECH,2)
-                THRESHOLDS(ECH(n))=10000;
-            end
-            %alt codes
-            %         for n=1:size(THRESHOLDS,2)
-            %             if ELEC_CHECK(n)== 0
-            %                 THRESHOLDS(n) = 10000;
-            %             end
-            %         end
-        else
-            THRESHOLDS_pos=0;
-        end % end THRESHOLDS_pos
-        
-        % save thresholds in spiketrain-file
-        %         for n=1:size(THRESHOLDS,2)
-        %             SPIKEZ.neg.THRESHOLDS.Th(1,n)=THRESHOLDS(n);
-        %         end
-        SPIKEZ.neg.THRESHOLDS.Th=THRESHOLDS; % Sh.Kh
-        %         for n=1:size(THRESHOLDS_pos,2)
-        %             SPIKEZ.pos.THRESHOLDS.Th(1,n)=THRESHOLDS_pos(n);
-        %         end
-        SPIKEZ.pos.THRESHOLDS.Th=THRESHOLDS_pos;% Sh.Kh
-        
-        waitbar(1,h_wait,'Done.'), close(h_wait);
-        disp('Threshold calculation finished')
         set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
         set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Value',1,'Enable','on')
         set(findobj(gcf,'Tag','CELL_ShowcurrentThresh'),'String','');
         set(findobj(gcf,'Tag','Elsel_Thresh'),'String','');
         
-        thresholddata = true;
+        
         
         % Call function to calculate a dynamic threshold if checkbox is
         % active
@@ -5832,7 +4931,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             PREF(7)=PREF(6); % t_nn is not needed anymore, however, in case a function needs PREF(7)
             PREF(8) = str2double(get(findobj(gcf,'Tag','IBI_max'),'string'));       % min. time between 2 Bursts in ms
             if PREF(5)<3
-                msgbox('A burst consists of at least 3 Spikes...','Dr.CELL�s hint','error');
+                msgbox('A burst consists of at least 3 Spikes...','Dr.CELL�s hint','error');
                 uiwait;
                 PREF(5)=3;
             end
@@ -5934,11 +5033,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         
         % redraw:
-        if Viewselect == 0
-            %redraw;
-        elseif Viewselect == 1
-            % redraw_allinone;
-        end
+        redrawdecide;
     end
 
 % --- Spikedetection_call (MC)
@@ -5949,12 +5044,14 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         % init structure SPIKEZ
         SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
-        %         SPIKEZ=initSPIKEZ(SPIKEZ,M);
         
         % detect negative and/or positve spikes?
         h=findobj('parent',mainWindow);
         SPIKEZ.neg.flag = get(findobj(h,'Tag','negSpike_Box'),'value');
         SPIKEZ.pos.flag = get(findobj(h,'Tag','posSpike_Box'),'value');
+        
+        SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
+        SPIKEZ.PREF.rec_dur = rec_dur;
         
         % save idleTime
         SPIKEZ.PREF.idleTime=PREF(4)/1000; % from ms to s
@@ -5962,28 +5059,49 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         % call spikedetection function
         if (get(findobj('Tag','Spike2_Box'),'value')) == 0 % if unchecked use normal spikedetection
             [SPIKEZ]=spikedetection(RAW,SPIKEZ); % detect spikes
-            % get Amplitudes of timestamps
-            SPIKEZ.AMP=getSpikeAmplitudes(RAW,SPIKEZ.TS,SPIKEZ.PREF.SaRa); % for all current spikes
         else
             [SPIKEZ]=combinedSpikeDetection(RAW,SPIKEZ); % spikedetection according to Lieb et al. (2017)
         end
         
-        % calculate spikeparameter like mean firing rate ect.
-        SPIKEZ=SpikeParameterCalculation(SPIKEZ);
-        SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
+        % apply refractory time (aka "idle time") and get amplitude values
+        [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
+
+        % calculate spike features like mean firing rate
+        SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
+        SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT); % calculate signal to noise ratio
+        
+%         % apply Refractory time
+%         SPIKEZ.TS=idle_time(SPIKEZ.TS,SPIKEZ.PREF.idleTime);
+%         SPIKEZ.neg.TS=idle_time(SPIKEZ.neg.TS,SPIKEZ.PREF.idleTime);
+%         SPIKEZ.pos.TS=idle_time(SPIKEZ.pos.TS,SPIKEZ.PREF.idleTime);
+%         
+%         % delete all rows that only contain zeros:
+%         SPIKEZ.TS=SPIKEZ.TS(any(SPIKEZ.TS,2),:);
+%         SPIKEZ.neg.TS=SPIKEZ.neg.TS(any(SPIKEZ.neg.TS,2),:);
+%         SPIKEZ.pos.TS=SPIKEZ.pos.TS(any(SPIKEZ.pos.TS,2),:);
+%         
+%         % get amplitude for each spike
+%         [SPIKEZ.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
+%         [SPIKEZ.neg.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.neg.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
+%         [SPIKEZ.pos.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.pos.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
+%         
+%         % calculate spikeparameter like mean firing rate ect.
+%         SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
+%         SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
         
         
-        % old parameter:
-        SPIKES=SPIKEZ.TS;
-        AMPLITUDES=SPIKEZ.AMP;
-        NR_SPIKES=SPIKEZ.N;
-        FR=SPIKEZ.FR;
-        N_FR=SPIKEZ.aeN_FR; % number of active electrodes
-        aeFRmean=SPIKEZ.aeFRmean;
-        aeFRstd=SPIKEZ.aeFRstd;
-        SNR=SPIKEZ.neg.SNR.SNR;
-        SNR_dB = SPIKEZ.neg.SNR.SNR_dB;
-        Mean_SNR_dB = SPIKEZ.neg.SNR.Mean_SNR_dB;
+        % old variables (just in case there are still used by old DrCell functions):
+%         SPIKES=SPIKEZ.TS;
+%         AMPLITUDES=SPIKEZ.AMP;
+%         NR_SPIKES=SPIKEZ.N;
+%         FR=SPIKEZ.FR;
+%         N_FR=SPIKEZ.aeN_FR; % number of active electrodes
+%         aeFRmean=SPIKEZ.aeFRmean;
+%         aeFRstd=SPIKEZ.aeFRstd;
+%         SNR=SPIKEZ.neg.SNR.SNR;
+%         SNR_dB = SPIKEZ.neg.SNR.SNR_dB;
+%         Mean_SNR_dB = SPIKEZ.neg.SNR.Mean_SNR_dB; 
+        [SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=copySpikesIntoOldStructure(SPIKEZ);
         
         
         
@@ -6095,18 +5213,18 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function rasterplotButtonCallback(~,~)
         
         % GUI
-        h_main = figure('Position',[150 50 700 660],'Name','Rasterplot');
+        h_main = figure('Position',[150 50 700 660],'Name','Rasterplot','Color',GUI_Color_BG);
         
-        h_p1=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9]);
+        h_p1=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9],'BackgroundColor',GUI_Color_BG);
         axes('Parent',h_p1,'Units','Normalized','Position',[.1 .1 0.8 .8],'Tag','axes_rasterplot');
         
-        h_p2=uipanel('Parent',h_main,'Position',[0.01 0.9 0.99 0.1]);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_spikes','String','Spikes','units','Normalized','position', [.1 .75 .2 .2],'value',0,'TooltipString','Shows spikes.','Callback',@rasterplot);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_bursts','String','Bursts','units','Normalized','position', [.1 .5 .2 .2],'value',0,'TooltipString','Shows bursts.','Callback',@rasterplot);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_nb','String','Networkbursts (NB)','units','Normalized','position', [.1 .25 .2 .2],'value',0,'TooltipString','Shows networkbursts.','Callback',@rasterplot);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_sbe','String','Synchronous Burst Events (SBE)','units','Normalized','position', [.35 .75 .2 .2],'value',0,'TooltipString','Shows synchronous burst events.','Callback',@rasterplot);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_sbe_old','String','SBE_old','units','Normalized','position', [.35 .5 .2 .2],'value',0,'TooltipString','Shows synchronous burst events.','Callback',@rasterplot);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_show_num','String','show #Events','units','Normalized','position', [.35 .25 .2 .2],'value',0,'TooltipString','Shows number of bursts per event.','Callback',@rasterplot);
+        h_p2=uipanel('Parent',h_main,'Position',[0.01 0.9 0.99 0.1],'BackgroundColor',GUI_Color_BG);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_spikes','String','Spikes','units','Normalized','position', [.1 .7 .2 .25],'value',0,'TooltipString','Shows spikes.','Callback',@rasterplot);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_bursts','String','Bursts','units','Normalized','position', [.1 .45 .2 .25],'value',0,'TooltipString','Shows bursts.','Callback',@rasterplot);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_nb','String','Networkbursts (NB)','units','Normalized','position', [.1 .2 .2 .25],'value',0,'TooltipString','Shows networkbursts.','Callback',@rasterplot);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_sbe','String','Synchronous Burst Events (SBE)','units','Normalized','position', [.35 .7 .2 .25],'value',0,'TooltipString','Shows synchronous burst events.','Callback',@rasterplot);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_sbe_old','String','SBE_old','units','Normalized','position', [.35 .45 .2 .25],'value',0,'TooltipString','Shows synchronous burst events.','Callback',@rasterplot);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_show_num','String','show #Events','units','Normalized','position', [.35 .2 .2 .25],'value',0,'TooltipString','Shows number of bursts per event.','Callback',@rasterplot);
         
         % draw rasterplot
         rasterplot();
@@ -6119,9 +5237,9 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         % draw text
         a=0; e=rec_dur; % display from a to e seconds
-        if NCh~=0  % HDMEA Data
-            ROW=NCh;
-            for n=1:NCh
+        if HDmode  % HDMEA Data
+            ROW=nr_channel;
+            for n=1:nr_channel
                 if ~isempty(nonzeros(SPIKEZ.TS(:,n)))
                     Names(n)= EL_NAMES(n);
                 else
@@ -6157,7 +5275,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         if get(findobj(gcf,'Tag','checkbox_spikes'),'Value')==1
             %             set(gca,'YDir','reverse', 'ytick', [1.25:1:R+1], 'TickLength',[0 0], 'YTickLabel',Names','YLim',[0 R+1],'FontSize',6);
-            if HDspikedata==1 || HDrowdata==1 % HDMEA Data
+            if HDmode % HDMEA Data
                 for n=1:size(SPIKEZ.TS,2)
                     if ~isempty(nonzeros(SPIKEZ.TS(:,n)))
                         line ('Xdata',nonzeros(SPIKEZ.TS(:,n)),'Ydata', (n+0.25).*ones(1,length(nonzeros(SPIKEZ.TS(:,n)))),...
@@ -6182,17 +5300,17 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         % draw bursts
         if get(findobj(gcf,'Tag','checkbox_bursts'),'Value')==1
-            for n=1:NCh
-                R=NCh;
-                if ~isempty(nonzeros(BURSTS.BEG(:,n)))
-                    Names(n)= EL_NAMES(n);
-                else
-                    Names(n)= {['' ]};
-                end
-            end
-            set(gca,'YDir','reverse', 'ytick', [1.25:1:R+1], 'TickLength',[0 0], 'YTickLabel',Names','YLim',[0 R+1],'FontSize',6);
-            xlabel('t /s')
-            height=R+1;
+%             R=nr_channel;
+%             for n=1:nr_channel
+%                 if ~isempty(nonzeros(BURSTS.BEG(:,n)))
+%                     Names(n)= EL_NAMES(n);
+%                 else
+%                     Names(n)= {['' ]};
+%                 end
+%             end
+%             set(gca,'YDir','reverse', 'ytick', [1.25:1:R+1], 'TickLength',[0 0], 'YTickLabel',Names','YLim',[0 R+1],'FontSize',6);
+%             xlabel('t /s')
+%             height=R+1;
             
             COLOR=[0 1 0.4]; % 0 0.8 0.4
             ROW=1;o=1.5;l=1;
@@ -6299,7 +5417,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function correlationButtonCallback(source,event) %#ok<INUSD>
         autocorrelationWindow = figure('Position',[100 100 700 600],'Tag','Autocorrelation','Name','Autocorrelation','NumberTitle','off','Toolbar','none','Resize','off');
         autopaneltop=uipanel('Parent',autocorrelationWindow,'BackgroundColor',[.8 .8 .8],'fontweight','b','Units','pixels','Position',[5 515 690 80]);
-        uicontrol('Parent',autopaneltop,'style','text','units','Pixels','position', [10 35 300 30],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String','Shows autocorrelation of selected electrode. Please select one electrode and press "Apply..."!');
+        uicontrol('Parent',autopaneltop,'style','text','units','Pixels','position', [10 35 300 30],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String','Shows autocorrelation of selected electrode. Please select one electrode and press "Apply..."!');
         uicontrol('Parent',autopaneltop,'style','edit','units','Pixels','position', [10 10 300 20],'HorizontalAlignment','left','FontSize',9,'Tag','CELL_Selectautocorr_electrode','string','12');
         uicontrol('Parent',autopaneltop,'Style','PushButton','Units','Pixels','Position',[550 10 130 30],'FontSize',10,'FontWeight','bold','String','Apply...','ToolTipString','Calculates the autocorrelation of the selected electrode','CallBack',@redrawcorrelation);
         autopanelbot = uipanel('Parent',autocorrelationWindow,'BackgroundColor',[.8 .8 .8],'Units','pixels','Position',[5 5 690 510]);
@@ -6433,12 +5551,12 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function crosscorrelationButtonCallback(source,event) %#ok
         crosscorrelationWindow = figure('Position',[100 100 700 600],'Tag','Crosscorrelation','Name','Crosscorrelation','NumberTitle','off','Toolbar','none','Resize','off');
         crosspaneltop=uipanel('Parent',crosscorrelationWindow,'BackgroundColor',[.8 .8 .8],'fontweight','b','Units','pixels','Position',[5 515 690 80]);
-        uicontrol('Parent',crosspaneltop,'style','text','units','Pixels','position', [10 35 300 30],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String','Please select two electrodes and press "Apply..."!');
+        uicontrol('Parent',crosspaneltop,'style','text','units','Pixels','position', [10 35 300 30],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String','Please select two electrodes and press "Apply..."!');
         uicontrol('Parent',crosspaneltop,'style','edit','units','Pixels','position', [10 10 80 20],'HorizontalAlignment','left','FontSize',9,'Tag','CELL_Selectcrosscorr_electrode1','string','12');
         uicontrol('Parent',crosspaneltop,'style','edit','units','Pixels','position', [120 10 80 20],'HorizontalAlignment','left','FontSize',9,'Tag','CELL_Selectcrosscorr_electrode2','string','13');
         uicontrol('Parent',crosspaneltop,'Style','PushButton','Units','Pixels','Position',[550 10 130 30],'FontSize',10,'FontWeight','bold','String','Apply...','ToolTipString','Calculates the autocorrelation of the selected electrode','CallBack',@redrawcrosscorrelation);
         crosspanelbot = uipanel('Parent',crosscorrelationWindow,'BackgroundColor',[.8 .8 .8],'Units','pixels','Position',[5 5 690 510]);
-        uicontrol('Parent',crosspaneltop,'style','text','units','Pixels','position', [370 35 150 35],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String','Mean (all electrodes) Cohen´s Kappa');
+        uicontrol('Parent',crosspaneltop,'style','text','units','Pixels','position', [370 35 150 35],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String','Mean (all electrodes) Cohen´s Kappa');
         uicontrol('Parent',crosspaneltop,'style','edit','units','Pixels','position', [370 10 100 20],'HorizontalAlignment','left','FontSize',9,'Tag','CELL_cokap','string',kappa_mean);
         
         CORRBIN = 0;
@@ -6539,8 +5657,20 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         end
     end
 
+% --- Signalprocessing (MC) -------------------------------
+    function signalprocessingButtonCallback(~,~)
+        
+        
+        GLOB.file = file;
+        GLOB.GUI_Color_BG = GUI_Color_BG;
+ 
+        GUI_cardioSignalProcessing(RAW,SPIKEZ,GLOB)
+    end
+
 % --- Reduce Spikes (MC) --------------------------------
     function minFiringRateButtonCallback(~,~)
+        
+        
         
         dlg_prompt={'Delete all spike trains with less or equal than X spikes per minute. X = '};
         dlg_name='Set minimal spike rate';
@@ -6548,22 +5678,33 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         dlg_defaultanswer={'5'};
         minFR = str2double(cell2mat(inputdlg(dlg_prompt,dlg_name,dlg_numlines,dlg_defaultanswer)));
         
-        [SPIKEZ.TS, SPIKEZ.AMP]=deleteLowFiringRateSpiketrains(SPIKEZ.TS,SPIKEZ.AMP,SPIKEZ.PREF.rec_dur,minFR);
+        h=waitbar(0.25,['Deleting spike trains with less or equal than ' num2str(minFR) '.']);
+        
+        [SPIKEZ.TS, SPIKEZ.AMP, numDeletedElectrodes]=deleteLowFiringRateSpiketrains(SPIKEZ.TS,SPIKEZ.AMP,SPIKEZ.PREF.rec_dur,minFR);
+        disp(['Electrodes deleted:' num2str(numDeletedElectrodes)])
+        disp(['Number of active Electrodes: ' num2str(size(SPIKEZ.TS,2)-numDeletedElectrodes)])
         
         SPIKEZ.PREF.minFR=minFR; % save min. firing rate
         
-        SPIKEZ=SpikeParameterCalculation(SPIKEZ);
+        waitbar(0.5,h,'Recalculating spike parameter')
+        
+        SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
         
         % old parameter:
         SPIKES=SPIKEZ.TS;
         AMPLITUDES=SPIKEZ.AMP;
         NR_SPIKES=SPIKEZ.N;
         FR=SPIKEZ.FR;
-        N_FR=SPIKEZ.aeN_FR; % number of active electrodes
+        N_FR=SPIKEZ.aeFRn; % number of active electrodes
         aeFRmean=SPIKEZ.aeFRmean;
         aeFRstd=SPIKEZ.aeFRstd;
         
         redrawdecide;
+        
+        waitbar(1,h,'Finished')
+        
+        close(h)
+        
     end
 
 % --- Reduce Spikes (MC) --------------------------------
@@ -6597,7 +5738,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         
         % recalculate spike parameter
-        SPIKEZ=SpikeParameterCalculation(SPIKEZ);
+        SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
         
         % old parameter:
         SPIKES=SPIKEZ.TS;
@@ -6624,11 +5765,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function spiketrainButtonCallback(source,event) %#ok<INUSD>
         ST_EL_Auswahl=0;
         spiketrainWindow = figure('Position',[25 40 600 700],'Tag','Spiketrain','Name','Spiketrain','NumberTitle','off','Toolbar','none','Resize','off','color','w');
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [0 580 600 120],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String',' ');
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [0 0 20 700],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String',' ');
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [580 0 20 700],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String',' ');
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [0 0 600 50],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String',' ');
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [25 620 300 50],'BackgroundColor',[0.89 0.89 0.99],'FontSize',10, 'HorizontalAlignment','left','String','Enter electrode numbers (separated by space) for creating individual spiketrains!');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [0 580 600 120],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String',' ');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [0 0 20 700],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String',' ');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [580 0 20 700],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String',' ');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [0 0 600 50],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String',' ');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [25 620 300 50],'BackgroundColor', GUI_Color_BG,'FontSize',10, 'HorizontalAlignment','left','String','Enter electrode numbers (separated by space) for creating individual spiketrains!');
         
         %--- Electrodes
         
@@ -6638,8 +5779,8 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         uicontrol(spiketrainWindow,'Style','PushButton','Units','Pixels','Position',[450 600 130 30],'String','Create...','ToolTipString','Creates Spiketrain','CallBack',@redrawspiketrain);
         uicontrol('Parent',spiketrainWindow,'style','edit','units','Pixels','position', [450 635 45 20],'HorizontalAlignment','left','FontSize',9,'FontSize',9,'Tag','ST_start','string','0');
         uicontrol('Parent',spiketrainWindow,'style','edit','units','Pixels','position', [515 635 45 20],'HorizontalAlignment','left','FontSize',9,'FontSize',9,'Tag','ST_ende','string',ST_ENDE_TAT);
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [498 630 15 20],'BackgroundColor',[0.89 0.89 0.99],'FontSize',7, 'HorizontalAlignment','left','String','to');
-        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [565 630 15 20],'BackgroundColor',[0.89 0.89 0.99],'FontSize',7, 'HorizontalAlignment','left','String','sec');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [498 630 15 20],'BackgroundColor', GUI_Color_BG,'FontSize',7, 'HorizontalAlignment','left','String','to');
+        uicontrol('Parent',spiketrainWindow,'style','text','units','Pixels','position', [565 630 15 20],'BackgroundColor', GUI_Color_BG,'FontSize',7, 'HorizontalAlignment','left','String','sec');
         
         % --- show spiketrains (standard view)---
         for i=1:nr_channel
@@ -6857,10 +5998,10 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             end
             %raising slope
             Risepanel = uipanel('Parent',mainNWB,'Title','rising time 20%-80%','FontSize',10,'BackgroundColor',[.8 .8 .8],'fontweight','b','Units','pixels','Position',[130 40 256 200]);
-            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels', 'position', [5 130 120 30],'String','min time [s]');
-            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels', 'position', [5 90 120 30],'String','max time [s]');
-            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels', 'position', [5 50 120 30],'String','average [s]');
-            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels', 'position', [5 10 140 30],'String','Standard deviation');
+            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels', 'position', [5 130 120 30],'String','min time [s]');
+            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels', 'position', [5 90 120 30],'String','max time [s]');
+            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels', 'position', [5 50 120 30],'String','average [s]');
+            uicontrol('Parent',Risepanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels', 'position', [5 10 140 30],'String','Standard deviation');
             
             uicontrol('Parent',Risepanel,'Units','pixels','BackgroundColor','w','Position',[160 142 90 20],'style','edit','HorizontalAlignment','left','FontSize',10,'units','pixels','Tag','trise_1');
             uicontrol('Parent',Risepanel,'Units','pixels','BackgroundColor','w','Position',[160 102 90 20],'style','edit','HorizontalAlignment','left','FontSize',10,'units','pixels','Tag','trise_2');
@@ -6874,10 +6015,10 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             
             %decreasing slope
             Fallpanel = uipanel('Parent',mainNWB,'Title','falling time 80%-20%','FontSize',10,'BackgroundColor',[.8 .8 .8],'fontweight','b','Units','pixels','Position',[390 40 256 200]);
-            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 130 120 30],'String','min time [s]');
-            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 90 120 30],'String','max time [s]');
-            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 50 120 30],'String','average [s]');
-            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 10 140 30],'String','Standard deviation');
+            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 130 120 30],'String','min time [s]');
+            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 90 120 30],'String','max time [s]');
+            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 50 120 30],'String','average [s]');
+            uicontrol('Parent',Fallpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 10 140 30],'String','Standard deviation');
             
             uicontrol('Parent',Fallpanel,'Units','pixels','BackgroundColor','w','Position',[160 142 90 20],'style','edit','HorizontalAlignment','left','FontSize',10,'units','pixels','Tag','tfall_1');
             uicontrol('Parent',Fallpanel,'Units','pixels','BackgroundColor','w','Position',[160 102 90 20],'style','edit','HorizontalAlignment','left','FontSize',10,'units','pixels','Tag','tfall_2');
@@ -6891,10 +6032,10 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             
             %duration
             Durationpanel = uipanel('Parent',mainNWB,'Title','duration 20%-20%','FontSize',10,'BackgroundColor',[.8 .8 .8],'fontweight','b','Units','pixels','Position',[650 40 256 200]);
-            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 130 120 30],'String','min time [s]');
-            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 90 120 30],'String','max time [s]');
-            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 50 120 30],'String','average [s]');
-            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor',[0.89 0.89 0.99],'FontSize',10,'units','pixels','position', [5 10 140 30],'String','Standard deviation');
+            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 130 120 30],'String','min time [s]');
+            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 90 120 30],'String','max time [s]');
+            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 50 120 30],'String','average [s]');
+            uicontrol('Parent',Durationpanel,'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','position', [5 10 140 30],'String','Standard deviation');
             
             uicontrol('Parent',Durationpanel,'Units','pixels','BackgroundColor','w','Position',[160 142 90 20],'style','edit','HorizontalAlignment','left','FontSize',10,'units','pixels','Tag','tdur_1');
             uicontrol('Parent',Durationpanel,'Units','pixels','BackgroundColor','w','Position',[160 102 90 20],'style','edit','HorizontalAlignment','left','FontSize',10,'units','pixels','Tag','tdur_2');
@@ -7187,23 +6328,23 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         ES_mean = ES_sum/(((size(v,2)-1)^2+(size(v,2)-1))/2);
         
         %Main Window
-        EventsynchronizationWindow = figure('Name','Event_synchronization','NumberTitle','off','Position',[45 100 600 600],'Toolbar','none','Resize','off','Color',[0.89 0.89 0.99],'Tag','Event_sync_window');
+        EventsynchronizationWindow = figure('Name','Event_synchronization','NumberTitle','off','Position',[45 100 600 600],'Toolbar','none','Resize','off','Color',GUI_Color_BG,'Tag','Event_sync_window');
         
         
         %Main Window header
-        uicontrol('Parent', EventsynchronizationWindow,'Style', 'text','Position', [140 575 250 20],'HorizontalAlignment','center','String','Network Synchronizity Plot','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent', EventsynchronizationWindow,'Style', 'text','Position', [140 575 250 20],'HorizontalAlignment','center','String','Network Synchronizity Plot','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Button-Area
-        EventPanel=uipanel('Parent',EventsynchronizationWindow,'Units','pixels','Position',[485 1 115 599],'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',EventPanel,'Style', 'text','Position', [25 575 60 20],'HorizontalAlignment','left','String', 'Display:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        EventPanel=uipanel('Parent',EventsynchronizationWindow,'Units','pixels','Position',[485 1 115 599],'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',EventPanel,'Style', 'text','Position', [25 575 60 20],'HorizontalAlignment','left','String', 'Display:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
-        %         uicontrol('Parent',EventPanel,'Style','text','Position', [35 550 100 20],'HorizontalAlignment','left','String', 'Sync Threshold:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        %         uicontrol('Parent',EventPanel,'Style','text','Position', [35 550 100 20],'HorizontalAlignment','left','String', 'Sync Threshold:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Colorbar boundary edit-fields
-        uicontrol('Parent',EventPanel,'Style', 'text','Position', [7 513 65 40],'HorizontalAlignment','left','String','Upper Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',EventPanel,'Style', 'text','Position', [7 513 65 40],'HorizontalAlignment','left','String','Upper Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',EventPanel,'Units','Pixels','Position', [65 525 40 20],'Tag','Upper_Sync_Thres','HorizontalAlignment','right','FontSize',8,'Value',1.0,'String',1.0,'Style','edit');
         
-        uicontrol('Parent',EventPanel,'Style', 'text','Position', [7 87 65 40],'HorizontalAlignment','left','String','Lower Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',EventPanel,'Style', 'text','Position', [7 87 65 40],'HorizontalAlignment','left','String','Lower Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',EventPanel,'Units','Pixels','String','Lower Boundary','Position', [67 100 40 20],'Tag','Lower_Sync_Thres','HorizontalAlignment','right','FontSize',8,'Value',0.3,'String',0.3,'Style','edit');
         
         %Synchronicity indicators
@@ -7265,7 +6406,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         if ES_figure_active == 1
             cla(ES_network_figure)
         end
-        ES_network_figure = subplot('Position',[0.05 0.2 0.7 0.7],'Color',[0.89 0.89 0.99],'Tag','ES_network_plot');
+        ES_network_figure = subplot('Position',[0.05 0.2 0.7 0.7],'Color',GUI_Color_BG,'Tag','ES_network_plot');
         cmap = colormap(hot(1001));
         cmap = flip(cmap,1);
         ES_figure_active = 1;
@@ -7301,7 +6442,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         cmap_temp = flip(cmap_temp,1);
         scatter(EL_POSITION(:,1),EL_POSITION(:,2),100,cmap_temp);
         
-        set(gca,'Color',[0.89 0.89 0.99]);
+        set(gca,'Color',GUI_Color_BG);
         set(gca,'xlim',[0 9],'ylim',[0 9]);
         set(gca,'XTickLabel',[],'YTickLabel',[]);
         set(gca,'YDir','Reverse');
@@ -7429,23 +6570,23 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         MI_mean_shown = 0;
         %save('0_Bic_1test.mat','MI');
         %Main Window
-        MutualinformationWindow = figure('Name','Mutual_information','NumberTitle','off','Position',[45 100 600 600],'Toolbar','none','Resize','off','Color',[0.89 0.89 0.99],'Tag','mutual_inf_window');
+        MutualinformationWindow = figure('Name','Mutual_information','NumberTitle','off','Position',[45 100 600 600],'Toolbar','none','Resize','off','Color',GUI_Color_BG,'Tag','mutual_inf_window');
         
         
         %Main Window header
-        uicontrol('Parent', MutualinformationWindow,'Style', 'text','Position', [140 575 250 20],'HorizontalAlignment','center','String','Mutual Information Plot','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent', MutualinformationWindow,'Style', 'text','Position', [140 575 250 20],'HorizontalAlignment','center','String','Mutual Information Plot','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Button-Area
-        muinfPanel=uipanel('Parent',MutualinformationWindow,'Units','pixels','Position',[485 1 115 599],'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [25 575 60 20],'HorizontalAlignment','left','String', 'Display:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        muinfPanel=uipanel('Parent',MutualinformationWindow,'Units','pixels','Position',[485 1 115 599],'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [25 575 60 20],'HorizontalAlignment','left','String', 'Display:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
-        %         uicontrol('Parent',EventPanel,'Style','text','Position', [35 550 100 20],'HorizontalAlignment','left','String', 'Sync Threshold:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        %         uicontrol('Parent',EventPanel,'Style','text','Position', [35 550 100 20],'HorizontalAlignment','left','String', 'Sync Threshold:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Colorbar boundary edit-fields
-        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 513 65 40],'HorizontalAlignment','left','String','Upper Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 513 65 40],'HorizontalAlignment','left','String','Upper Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',muinfPanel,'Units','Pixels','Position', [65 525 40 20],'Tag','Upper_MI_Thres','HorizontalAlignment','right','FontSize',8,'Value',1.0,'String',1.0,'Style','edit');
         
-        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 87 65 40],'HorizontalAlignment','left','String','Lower Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 87 65 40],'HorizontalAlignment','left','String','Lower Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',muinfPanel,'Units','Pixels','String','Lower Boundary','Position', [67 100 40 20],'Tag','Lower_MI_Thres','HorizontalAlignment','right','FontSize',8,'Value',0.3,'String',0.3,'Style','edit');
         
         %Synchronicity indicators
@@ -7503,7 +6644,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         if MI_figure_active == 1
             cla(MI_network_figure)
         end
-        MI_network_figure = subplot('Position',[0.05 0.2 0.7 0.7],'Color',[0.89 0.89 0.99],'Tag','MI_network_plot');
+        MI_network_figure = subplot('Position',[0.05 0.2 0.7 0.7],'Color',GUI_Color_BG,'Tag','MI_network_plot');
         cmap = colormap(hot(1001));
         cmap = flip(cmap,1);
         MI_figure_active = 1;
@@ -7539,7 +6680,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         cmap_temp = flip(cmap_temp,1);
         scatter(EL_POSITION(:,1),EL_POSITION(:,2),100,cmap_temp);
         
-        set(gca,'Color',[0.89 0.89 0.99]);
+        set(gca,'Color',GUI_Color_BG);
         set(gca,'xlim',[0 9],'ylim',[0 9]);
         set(gca,'XTickLabel',[],'YTickLabel',[]);
         set(gca,'YDir','Reverse');
@@ -7621,23 +6762,23 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         end
         
         
-        CrosscorrelationWindow = figure('Name','cross_correlation','NumberTitle','off','Position',[45 100 600 600],'Toolbar','none','Resize','off','Color',[0.89 0.89 0.99],'Tag','mutual_inf_window');
+        CrosscorrelationWindow = figure('Name','cross_correlation','NumberTitle','off','Position',[45 100 600 600],'Toolbar','none','Resize','off','Color',GUI_Color_BG,'Tag','mutual_inf_window');
         
         
         %Main Window header
-        uicontrol('Parent', CrosscorrelationWindow,'Style', 'text','Position', [140 575 250 20],'HorizontalAlignment','center','String','Cross-Correlation Plot','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent', CrosscorrelationWindow,'Style', 'text','Position', [140 575 250 20],'HorizontalAlignment','center','String','Cross-Correlation Plot','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Button-Area
-        muinfPanel=uipanel('Parent',CrosscorrelationWindow,'Units','pixels','Position',[485 1 115 599],'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [25 575 60 20],'HorizontalAlignment','left','String', 'Display:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        muinfPanel=uipanel('Parent',CrosscorrelationWindow,'Units','pixels','Position',[485 1 115 599],'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [25 575 60 20],'HorizontalAlignment','left','String', 'Display:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
-        %         uicontrol('Parent',EventPanel,'Style','text','Position', [35 550 100 20],'HorizontalAlignment','left','String', 'Sync Threshold:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        %         uicontrol('Parent',EventPanel,'Style','text','Position', [35 550 100 20],'HorizontalAlignment','left','String', 'Sync Threshold:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Colorbar boundary edit-fields
-        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 513 65 40],'HorizontalAlignment','left','String','Upper Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 513 65 40],'HorizontalAlignment','left','String','Upper Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',muinfPanel,'Units','Pixels','Position', [65 525 40 20],'Tag','Upper_CC_Thres','HorizontalAlignment','right','FontSize',8,'Value',1.0,'String',1.0,'Style','edit');
         
-        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 87 65 40],'HorizontalAlignment','left','String','Lower Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',muinfPanel,'Style', 'text','Position', [7 87 65 40],'HorizontalAlignment','left','String','Lower Boundary:','FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',muinfPanel,'Units','Pixels','String','Lower Boundary','Position', [67 100 40 20],'Tag','Lower_CC_Thres','HorizontalAlignment','right','FontSize',8,'Value',0.3,'String',0.3,'Style','edit');
         
         %Synchronicity indicators
@@ -7695,7 +6836,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         if CC_figure_active == 1
             cla(CC_network_figure)
         end
-        CC_network_figure = subplot('Position',[0.05 0.2 0.7 0.7],'Color',[0.89 0.89 0.99],'Tag','CC_network_plot');
+        CC_network_figure = subplot('Position',[0.05 0.2 0.7 0.7],'Color',GUI_Color_BG,'Tag','CC_network_plot');
         cmap = colormap(hot(1001));
         cmap = flip(cmap,1);
         CC_figure_active = 1;
@@ -7731,7 +6872,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         cmap_temp = flip(cmap_temp,1);
         scatter(EL_POSITION(:,1),EL_POSITION(:,2),100,cmap_temp);
         
-        set(gca,'Color',[0.89 0.89 0.99]);
+        set(gca,'Color',GUI_Color_BG);
         set(gca,'xlim',[0 9],'ylim',[0 9]);
         set(gca,'XTickLabel',[],'YTickLabel',[]);
         set(gca,'YDir','Reverse');
@@ -7782,20 +6923,20 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
     function MeasureSyncButtonCallback(hObj,event)
         
         % GUI
-        h_main = figure('Units','Normalized','Position',[.25 .3 .3 .2],'Name','Measure spike train synchrony');
+        h_main = figure('Units','Normalized','Position',[.25 .3 .3 .2],'Name','Measure spike train synchrony','Color',GUI_Color_BG);
         
         %h_p1=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9]);
         %   axes('Parent',h_p1,'Units','Normalized','Position',[.1 .1 0.8 .8],'Tag','axes_rasterplot');
         
         
         
-        h_p2=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9]);
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_SC','String','Spike-contrast','units','Normalized','position', [.1 .75 .3 .2],'value',0,'TooltipString','Calculate spike train synchrony using "Spike-contrast".');
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_CC_Selinger','String','Cross-correlation (Selinger)','units','Normalized','position', [.1 .5 .3 .2],'value',0,'TooltipString','Calculate spike train synchrony using cross-correlation (bin size 500 ms) [Selinger et. al].');
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_MI1','String','Mutual Information 1','units','Normalized','position', [.1 .25 .3 .2],'value',0,'TooltipString','Calculate spike train synchrony using Mutual Information (bin size 500 ms). Normalization method 1');
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_MI2','String','Mutual Information 2','units','Normalized','position', [.45 .75 .3 .2],'value',0,'TooltipString','Calculate spike train synchrony using Mutual Information (bin size 500 ms). Normalization method 2.');
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_PS','String','Phase-synchronization','units','Normalized','position', [.45 .5 .3 .2],'value',0,'TooltipString','Calculate spike train synchrony using Phasesynchronization.');
-        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_CC_old','String','Cross-correlation (old)','units','Normalized','position', [.45 .25 .3 .2],'value',0,'TooltipString','Calculate spike train synchrony using cross-correlation (bin size 40 ms).');
+        h_p2=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9],'BackgroundColor',GUI_Color_BG);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_SC','String','Spike-contrast','units','Normalized','position', [.1 .75 .3 .2],'value',1,'TooltipString','Calculate spike train synchrony using "Spike-contrast".');
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_CC_Selinger','String','Cross-correlation (Selinger)','units','Normalized','position', [.1 .5 .3 .2],'value',1,'TooltipString','Calculate spike train synchrony using cross-correlation (bin size 500 ms) [Selinger et. al].');
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_MI1','String','Mutual Information 1','units','Normalized','position', [.1 .25 .3 .2],'value',1,'TooltipString','Calculate spike train synchrony using Mutual Information (bin size 500 ms). Normalization method 1');
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_MI2','String','Mutual Information 2','units','Normalized','position', [.45 .75 .3 .2],'value',1,'TooltipString','Calculate spike train synchrony using Mutual Information (bin size 500 ms). Normalization method 2.');
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_PS','String','Phase-synchronization','units','Normalized','position', [.45 .5 .3 .2],'value',1,'TooltipString','Calculate spike train synchrony using Phasesynchronization.');
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_CC_old','String','Cross-correlation (old)','units','Normalized','position', [.45 .25 .3 .2],'value',1,'TooltipString','Calculate spike train synchrony using cross-correlation (bin size 40 ms).');
         
         % Button
         uicontrol('Parent',h_p2,'Units','Normalized','Position',[.6 .1 0.3 0.15],'Tag','CELL_convertButton','String','Start','FontSize',9,'TooltipString','Start measuring synchrony between all spike trains','Callback',@MeasureSynchrony);
@@ -7915,6 +7056,160 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         
     end
+
+% --- Estimate Connectivity (MC) ---------------------------------------
+    function EstimateConnectivityButtonCallback(~,~)
+        
+        % GUI
+        h_main = figure('Position',[150 50 700 660],'Name','Connectivity','Color',GUI_Color_BG);
+        
+        h_p1=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9],'BackgroundColor',GUI_Color_BG);
+        axes('Parent',h_p1,'Units','Normalized','Position',[.1 .1 0.8 .8],'Tag','axes_graph');
+        
+        % Checkboxes
+        h_p2=uipanel('Parent',h_main,'Position',[0.01 0.9 0.99 0.1],'BackgroundColor',GUI_Color_BG);
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_Th','String','Use surrogate threshold','units','Normalized','position', [.6 .5 .3 .3],'value',0,'TooltipString','Estimate connectivity using TSPE and delete connections that are not significant according to a surrogate data procedure.');
+        uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_CircularGraph','String','Circular graph','units','Normalized','position', [.2 .5 .3 .3],'value',0,'TooltipString','Instead of MEA-Layout use circular Graph.');
+
+        
+        % Button
+        uicontrol('Parent',h_p2,'Units','Normalized','Position',[.6 .1 0.3 0.3],'Tag','CELL_convertButton','String','Start','FontSize',9,'TooltipString','Start estimating connectivity','Callback',@EstimateConnectivityStartButtonCallback);
+        
+        % define coordinates for plot
+        [xx,yy]=get_X_Y_CoordinatesFromMeaLayout(EL_NAMES,HDmode);
+        
+        % dummy connectivity matrix to create graph
+        plotElectrodesOnly(xx,yy)
+ 
+    end
+
+    function EstimateConnectivityStartButtonCallback(~,~)
+        [CM,CM_exh,CM_inh,CM_reduced, CM_exh_reduced, CM_inh_reduced]=estimateConnectivity(SPIKEZ);
+        
+        %[SW,C,L]=getSmallWorldness(CM_reduced);
+        
+        %[D, D_in, D_out]=getMeanNodeDegree(CM_reduced);
+        
+        flag_isMeaLayout = not(get(findobj(gcf,'Tag','checkbox_CircularGraph'),'Value')); 
+        
+        handle=gca;
+        cla(handle) % clear axis
+        plotConnectivity(CM,EL_NAMES,flag_isMeaLayout)
+        
+        % calculate graph theory mesures (e.g. cluster coefficient)
+        if 1
+            flag_binary=0; % use weighted matrix (not binary, better performance, see Master thesis of Nahid Nafez)
+            graphMeasures=getAllGraphParameter(CM,flag_binary) % calculate and output the graph measures
+        end
+    end
+
+% --- Calculate Connectivity (MC) --------------------------------------
+    function [CM,CM_exh,CM_inh, CM_reduced, CM_exh_reduced, CM_inh_reduced]=estimateConnectivity(SPIKEZ)
+        
+        flag_waitbar = 1;
+        
+        [TS_reduced, activeElIdx] = reduceTSsize(SPIKEZ.TS);
+        
+        if get(findobj(gcf,'Tag','checkbox_Th'),'Value')==0
+            if 0 %HDmode % not working yet
+                j=initHPC();
+                task = createTask(j, @TSPE_call, 3, {TS_reduced, SPIKEZ.PREF.rec_dur, flag_waitbar});   % % (Jobname, @Funktion, Anzahl der R�ckgebevariablen,{�bergabeparameter});
+                [CM_reduced,CM_exh_reduced,CM_inh_reduced]=closeHPC(j,task);
+            else
+                [CM_reduced,CM_exh_reduced,CM_inh_reduced]=TSPE_call(TS_reduced, SPIKEZ.PREF.rec_dur, flag_waitbar);
+            end
+        else
+            [CM_reduced,CM_exh_reduced,CM_inh_reduced]=TSPE_withSurrogateThreshold_call(TS_reduced, SPIKEZ.PREF.rec_dur,flag_waitbar);
+        end
+        
+        [CM,CM_exh,CM_inh] = rearrangeElectrodePosition(CM_reduced,CM_exh_reduced,CM_inh_reduced,activeElIdx,nr_channel);
+        
+        
+        
+    end
+
+% --- Plot Connectivity (MC) --------------------------------------
+    function plotConnectivity(CM,EL_NAMES,flag_isMeaLayout)
+        % define coordinates for plot
+        [xx,yy]=get_X_Y_CoordinatesFromMeaLayout(EL_NAMES,HDmode);
+        
+        % apply threshold (only use connections bigger than 2*std(CM)
+        factor=2; % see master thesis of Stefano De Blasi
+        [CM,CM_exh,CM_inh]=applyEasyThresholdToCM(CM,factor);
+        
+        hs=subplot(1,1,1);
+        
+        if flag_isMeaLayout
+            if HDmode
+                [hs,h_exh,h_inh]=plotGraph_HDMEA_Layout(CM_exh,CM_inh,xx,yy,hs);
+            else
+                [hs,h_exh,h_inh]=plotGraph_MEA_Layout(CM_exh,CM_inh,xx,yy,hs);
+            end
+        else
+            circularGraph(CM)
+        end
+    end
+
+% --- Spike-contrast (MC) ----------------------------------------------
+    function SpikeContrastButtonCallback(~,~)
+        
+        % GUI
+        h_main = figure('Units','Normalized','Position',[.1 .3 .6 .6],'Name','Spike-contrast','Color',GUI_Color_BG);
+        
+        h_p1=uipanel('Parent',h_main,'Position',[0.01 0.01 0.99 0.9],'BackgroundColor',GUI_Color_BG);
+        
+        pause(0.05)
+        
+        binStepFactor = 2;
+        fig=1;
+        rec=0;
+        ax = axes(h_p1); % generate axes to plot into it
+        SpikeContrast_figure(SPIKEZ.TS,SPIKEZ.PREF.rec_dur,binStepFactor,fig,rec,ax)
+    end
+
+% --- Clear Artefacts (MC) ---------------------------------------------
+    function clearArtefactsCallback(~,~)
+        
+        hw=waitbar(0,'Clearing Artefacts');
+        
+        % calc ISIs
+        for n=1:size(SPIKEZ.TS,2)
+            
+            
+            if ~isempty(nonzeros(SPIKEZ.TS(:,n)))
+                
+                TS = idle_time(SPIKEZ.TS(:,n),0.3); % first delete all spikes that are closer than 300 ms ("bursts" artefacts)
+                ISIs = diff(nonzeros(TS));
+                
+                [ISIhist, edges, bin] = histcounts(ISIs,[0 .1 .2 .3 .4 .5 .6 .7 .8]); % Bin width 100 ms, as temporal variation of artefacts is in this range
+                
+                numArtefacts = ISIhist(4)+ISIhist(5); % artefact T is between 300 ... 500 ms -> array position 4
+                numSpikes = length(nonzeros(TS));
+                
+                ratio = numArtefacts/numSpikes;
+                
+                % clear electrode if more than 50 % of all spikes are artefacts
+                if ratio >= 0.5
+                    SPIKEZ.TS(:,n) = 0;
+                    disp(['Electrode cleared: #' num2str(n)])
+                end
+                
+                waitbar(n/size(SPIKEZ.TS,2),hw,'Clearing Artefacts');
+                
+            end
+        end
+        
+        close(hw)
+        
+        if HDrawdata || HDspikedata
+            HDredraw
+        else
+            redraw
+        end
+        
+        
+    end
+
 % -------------------- Spike Analyse (RB)-------------------------------
     function Spike_Analyse (~,~)
         
@@ -7990,163 +7285,163 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         %main Window
         SpikeAnalyseWindow = figure('Name','Spike Analyse','NumberTitle','off','Position',[45 30 1270 750],'Toolbar','none','Resize','off');
-        uicontrol('Parent',SpikeAnalyseWindow,'Style', 'text','Position', [1082 398 200 20],'HorizontalAlignment','left','String', 'Spike Visualization:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',SpikeAnalyseWindow,'Style', 'text','Position', [697 398 120 20],'HorizontalAlignment','left','String', 'Clustering:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',SpikeAnalyseWindow,'Style', 'text','Position', [1082 398 200 20],'HorizontalAlignment','left','String', 'Spike Visualization:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',SpikeAnalyseWindow,'Style', 'text','Position', [697 398 120 20],'HorizontalAlignment','left','String', 'Clustering:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Button-Field
-        ControlPanel=uipanel('Parent',SpikeAnalyseWindow,'Units','pixels','Position',[10 360 615 360],'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 331 100 20],'HorizontalAlignment','left','String', 'General:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 228 100 20],'HorizontalAlignment','left','String', 'Histogram:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 331 100 20],'HorizontalAlignment','left','String', 'Statistics:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        ControlPanel=uipanel('Parent',SpikeAnalyseWindow,'Units','pixels','Position',[10 360 615 360],'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 331 100 20],'HorizontalAlignment','left','String', 'General:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 228 100 20],'HorizontalAlignment','left','String', 'Histogram:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 331 100 20],'HorizontalAlignment','left','String', 'Statistics:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Electrode Selection
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 312 100 20],'HorizontalAlignment','left','String', 'Electrode: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 312 100 20],'HorizontalAlignment','left','String', 'Electrode: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [93 284 50 50],'Tag','A_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Value',1,'Style','popupmenu');
         
         %Selection of used Spike Window
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 290 100 20],'HorizontalAlignment','left','String', 'Spike Time: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 290 100 20],'HorizontalAlignment','left','String', 'Spike Time: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position',[93 262 70 50],'Tag','pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','callback',@recalc);
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position',[168 262 70 50],'Tag','posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','callback',@recalc);
         
         %Selection Variable 1
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 268 100 20],'HorizontalAlignment','left','String', 'Variable 1: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 268 100 20],'HorizontalAlignment','left','String', 'Variable 1: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [93 240 147 50],'HorizontalAlignment','left','Tag','Variable 1','FontSize',8,'String',V,'Value',1,'Style','popupmenu');
         
         %Selection Variable 2
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 247 100 20],'HorizontalAlignment','left','String', 'Variable 2: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [10 247 100 20],'HorizontalAlignment','left','String', 'Variable 2: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [93 219 147 50],'HorizontalAlignment','left','Tag','Variable 2','FontSize',8,'String',V,'Value',1,'Style','popupmenu');
         
         %Show Cluster Overview
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [100 228 20 20],'HorizontalAlignment','left','FontSize',8,'Tag','Cluster','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position',[120 228 150 14],'HorizontalAlignment','left','String','Cluster Summary','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [100 228 20 20],'HorizontalAlignment','left','FontSize',8,'Tag','Cluster','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position',[120 228 150 14],'HorizontalAlignment','left','String','Cluster Summary','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %Wavelets on/off
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position',[260 16 20 15],'HorizontalAlignment','left','FontSize',8,'Tag','Wavelet','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position',[280 16 150 14],'HorizontalAlignment','left','String','Wavelet Packet Analysis','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position',[260 16 20 15],'HorizontalAlignment','left','FontSize',8,'Tag','Wavelet','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position',[280 16 150 14],'HorizontalAlignment','left','String','Wavelet Packet Analysis','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %integrate/differentiate Signal
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [260 1 15 15],'Tag','Int_dif','HorizontalAlignment','right','FontSize',8,'Value',1,'String',0,'Style','edit','callback',@recalc);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position',[280 1 150 14],'HorizontalAlignment','left','String','Derivation','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position',[280 1 150 14],'HorizontalAlignment','left','String','Derivation','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %Start Calculation
         uicontrol('Parent',ControlPanel,'Position', [509 5 80 20],'String', 'Start','FontSize',11,'FontWeight','bold','callback',@Start);
         
         %Histogram Selection Field
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 208 147 20],'HorizontalAlignment','left','Tag','H1','FontSize',8,'String',VH,'Value',2,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 210 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph1','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 210 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph1','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units', 'Pixels','Position', [10 186 147 20],'HorizontalAlignment','left','Tag','H2','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 188 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph2','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 188 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph2','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 164 147 20],'HorizontalAlignment','left','Tag','H3','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 166 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph3','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 166 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph3','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 142 147 20],'HorizontalAlignment','left','Tag','H4','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 144 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph4','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 144 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph4','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units', 'Pixels','Position', [10 120 147 20],'HorizontalAlignment','left','Tag','H5','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 122 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph5','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 122 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph5','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 98 147 20],'HorizontalAlignment','left','Tag','H6','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 100 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph6','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 100 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph6','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 76 147 20],'HorizontalAlignment','left','Tag','H7','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 78 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph7','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 78 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph7','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 54 147 20],'HorizontalAlignment','left','Tag','H8','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 56 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph8','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 56 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph8','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 32 147 20],'HorizontalAlignment','left','Tag','H9','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 34 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph9','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 34 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph9','BackgroundColor', GUI_Color_BG);
         
         uicontrol('Parent',ControlPanel,'Units','Pixels','Position', [10 10 147 20],'HorizontalAlignment','left','Tag','H10','FontSize',8,'String',VH,'Value',1,'Style','popupmenu');
-        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 12 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph10','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [162 12 10 10],'HorizontalAlignment','left','FontSize',8,'Tag','Hgraph10','BackgroundColor', GUI_Color_BG);
         
         %Statistics
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [420 329 40 20],'HorizontalAlignment','left','String','Mean','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [468 329 30 20],'HorizontalAlignment','left','String','Var','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [511 329 30 20],'HorizontalAlignment','left','String','Min','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [554 329 30 20],'HorizontalAlignment','left','String','Max','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [420 329 40 20],'HorizontalAlignment','left','String','Mean','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [468 329 30 20],'HorizontalAlignment','left','String','Var','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [511 329 30 20],'HorizontalAlignment','left','String','Min','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ControlPanel,'Style', 'text','Position', [554 329 30 20],'HorizontalAlignment','left','String','Max','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 303 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H1'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 303 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H1'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 306 40 20],'Tag','Mean1','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 306 40 20],'Tag','Var1','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 306 40 20],'Tag','Min1','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 306 40 20],'Tag','Max1','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 273 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H2'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 273 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H2'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 276 40 20],'Tag','Mean2','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 276 40 20],'Tag','Var2','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 276 40 20],'Tag','Min2','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 276 40 20],'Tag','Max2','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 243 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H3'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 243 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H3'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 246 40 20],'Tag','Mean3','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 246 40 20],'Tag','Var3','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 246 40 20],'Tag','Min3','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 246 40 20],'Tag','Max3','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 213 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H4'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 213 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H4'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 216 40 20],'Tag','Mean4','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 216 40 20],'Tag','Var4','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 216 40 20],'Tag','Min4','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 216 40 20],'Tag','Max4','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 183 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H5'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 183 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H5'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 186 40 20],'Tag','Mean5','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 186 40 20],'Tag','Var5','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 186 40 20],'Tag','Min5','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 186 40 20],'Tag','Max5','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 153 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H6'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 153 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H6'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 156 40 20],'Tag','Mean6','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 156 40 20],'Tag','Var6','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 156 40 20],'Tag','Min6','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 156 40 20],'Tag','Max6','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 123 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H7'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 123 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H7'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 126 40 20],'Tag','Mean7','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 126 40 20],'Tag','Var7','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 126 40 20],'Tag','Min7','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 126 40 20],'Tag','Max7','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 93 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H8'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 93 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H8'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 96 40 20],'Tag','Mean8','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 96 40 20],'Tag','Var8','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 96 40 20],'Tag','Min8','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 96 40 20],'Tag','Max8','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 63 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H9'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 63 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H9'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 66 40 20],'Tag','Mean9','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 66 40 20],'Tag','Var9','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 66 40 20],'Tag','Min9','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 66 40 20],'Tag','Max9','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
-        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 33 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H10'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',ControlPanel,'Style', 'text','Position', [260 33 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H10'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [420 36 40 20],'Tag','Mean10','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [463 36 40 20],'Tag','Var10','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [506 36 40 20],'Tag','Min10','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         uicontrol ('Parent',ControlPanel,'Units','Pixels','Position', [549 36 40 20],'Tag','Max10','HorizontalAlignment','right','FontSize',8,'Value',1,'Style','edit');
         
         %Select-Button-Area
-        SelectPanel = uipanel('Parent',SpikeAnalyseWindow,'Units','pixels','Position',[1085 342 175 55],'BackgroundColor',[0.89 0.89 0.99]);
+        SelectPanel = uipanel('Parent',SpikeAnalyseWindow,'Units','pixels','Position',[1085 342 175 55],'BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',SelectPanel,'Position', [5 30 80 20],'String', 'Select','FontSize',11,'FontWeight','bold','callback',@Sel);
         uicontrol('Parent',SelectPanel,'Position', [90 30 80 20],'String', 'Reset','FontSize',11,'FontWeight','bold','callback',@Start);
         uicontrol('Parent',SelectPanel,'Position', [5 5 80 20],'String', 'Spike','FontSize',11,'FontWeight','bold','callback',@ShowSpike);
         uicontrol('Parent',SelectPanel,'Position', [90 5 80 20],'String', 'Class','FontSize',11,'FontWeight','bold','callback',@ShowClass);
         
         %Cluster-Area
-        ClusterPanel = uipanel('Parent',SpikeAnalyseWindow,'Units','pixels','Position',[695 342 385 55],'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [5 30 80 20],'HorizontalAlignment','left','String', 'Parameters:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol ('Parent',ClusterPanel,'Units','Pixels','Position', [100 40 20 11],'HorizontalAlignment','left','FontSize',8,'Tag','Histogram','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol ('Parent',ClusterPanel,'Units','Pixels','Position', [100 27 20 11],'HorizontalAlignment','left','FontSize',8,'Tag','Variables','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [118 38 50 14],'HorizontalAlignment','left','String', 'Histogram','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [118 27 50 11],'HorizontalAlignment','left','String', 'Variables','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        ClusterPanel = uipanel('Parent',SpikeAnalyseWindow,'Units','pixels','Position',[695 342 385 55],'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [5 30 80 20],'HorizontalAlignment','left','String', 'Parameters:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol ('Parent',ClusterPanel,'Units','Pixels','Position', [100 40 20 11],'HorizontalAlignment','left','FontSize',8,'Tag','Histogram','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol ('Parent',ClusterPanel,'Units','Pixels','Position', [100 27 20 11],'HorizontalAlignment','left','FontSize',8,'Tag','Variables','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [118 38 50 14],'HorizontalAlignment','left','String', 'Histogram','FontSize',8,'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [118 27 50 11],'HorizontalAlignment','left','String', 'Variables','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
-        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [5 5 95 20],'HorizontalAlignment','left','String', 'Bin_Nr:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [5 5 95 20],'HorizontalAlignment','left','String', 'Bin_Nr:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ClusterPanel,'Units','Pixels','Position', [100 5 40 20],'Tag','Bin_Nr','HorizontalAlignment','right','FontSize',10,'Value',1,'Style','edit');
         
-        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [194 30 61 20],'HorizontalAlignment','left','String', 'Class Nr.:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',ClusterPanel,'Style', 'text','Position', [194 30 61 20],'HorizontalAlignment','left','String', 'Class Nr.:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol ('Parent',ClusterPanel,'Units','Pixels','Position', [255 30 40 20],'Tag','K_Nr','HorizontalAlignment','right','FontSize',8,'Value',1,'String',2,'Style','edit');
         
         uicontrol('Parent',ClusterPanel,'Position', [300 30 80 20],'String', 'K-Means','FontSize',11,'FontWeight','bold','callback',@K_Means_choice);
@@ -8517,16 +7812,16 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 end
             end
             
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 303 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H1'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 273 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H2'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 243 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H3'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 213 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H4'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 183 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H5'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 153 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H6'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 123 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H7'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 93 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H8'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 63 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H9'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 33 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H10'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 303 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H1'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 273 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H2'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 243 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H3'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 213 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H4'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 183 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H5'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 153 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H6'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 123 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H7'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 93 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H8'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 63 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H9'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',ControlPanel,'Style', 'text','Position', [260 33 160 20],'HorizontalAlignment','left','String',VH(get(findobj(gcf,'Tag','H10'),'value')),'FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
             clear H Objekts check;
         end
@@ -8653,11 +7948,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             posttime=postti(get(findobj(gcf,'Tag','posttime'),'value'));
             
             if size(nonzeros(SPIKES(:,Elektrode)),1) >= 9
-                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [150 321 50 15],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','k','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [200 321 50 15],'HorizontalAlignment','left','String',size(nonzeros(SPIKES(:,Elektrode))),'FontSize',10,'FontWeight','bold','ForegroundColor','k','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [150 321 50 15],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','k','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [200 321 50 15],'HorizontalAlignment','left','String',size(nonzeros(SPIKES(:,Elektrode))),'FontSize',10,'FontWeight','bold','ForegroundColor','k','BackgroundColor', GUI_Color_BG);
             else
-                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [150 321 50 15],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [200 321 50 15],'HorizontalAlignment','left','String',size(nonzeros(SPIKES(:,Elektrode))),'FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [150 321 50 15],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',ControlPanel,'Style', 'text','Position', [200 321 50 15],'HorizontalAlignment','left','String',size(nonzeros(SPIKES(:,Elektrode))),'FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor', GUI_Color_BG);
             end
             
             %         if varTdata~=1
@@ -8760,7 +8055,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                         set(findobj(gcf,'Tag',char(Hgraph(i))),'BackgroundColor',[CMAP(color(count2),1) CMAP(color(count2),2) CMAP(color(count2),3)]);
                         count2 = count2 + 1;
                     else
-                        set(findobj(gcf,'Tag',char(Hgraph(i))),'BackgroundColor',[0.89 0.89 0.99]);
+                        set(findobj(gcf,'Tag',char(Hgraph(i))),'BackgroundColor', GUI_Color_BG);
                     end
                 end
                 xlabel ('Normalized Scale');
@@ -8770,7 +8065,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 v= Min(C):(Max(C)-Min(C))/100:Max(C);
                 hist(nonzeros(SPIKES3D(:,Elektrode,C)),v);
                 for i=1:size(check,2)
-                    set(findobj(gcf,'Tag',char(Hgraph(i))),'BackgroundColor',[0.89 0.89 0.99]);
+                    set(findobj(gcf,'Tag',char(Hgraph(i))),'BackgroundColor', GUI_Color_BG);
                 end
                 set(findobj(gcf,'Tag',char(Hgraph(I))),'BackgroundColor',[CMAP(1,1) CMAP(1,2) CMAP(1,3)]);
                 xlabel (char(units(I)));
@@ -8797,26 +8092,26 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             
             Cluster_Window = figure('Name','Cluster','NumberTitle','off','Position',[10 30 1350 750],'Toolbar','none','Resize','off');
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [152 660 120 30],'HorizontalAlignment','left','String',VH(check(1)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 550 80 80],'HorizontalAlignment','left','String',VH(check(1)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [152 660 120 30],'HorizontalAlignment','left','String',VH(check(1)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 550 80 80],'HorizontalAlignment','left','String',VH(check(1)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [310 660 120 30],'HorizontalAlignment','left','String',VH(check(2)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 455 80 80],'HorizontalAlignment','left','String',VH(check(2)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [310 660 120 30],'HorizontalAlignment','left','String',VH(check(2)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 455 80 80],'HorizontalAlignment','left','String',VH(check(2)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [510 660 120 30],'HorizontalAlignment','left','String',VH(check(3)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 360 80 80],'HorizontalAlignment','left','String',VH(check(3)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [510 660 120 30],'HorizontalAlignment','left','String',VH(check(3)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 360 80 80],'HorizontalAlignment','left','String',VH(check(3)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [650 660 120 30],'HorizontalAlignment','left','String',VH(check(4)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 270 80 80],'HorizontalAlignment','left','String',VH(check(4)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [650 660 120 30],'HorizontalAlignment','left','String',VH(check(4)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 270 80 80],'HorizontalAlignment','left','String',VH(check(4)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [810 660 120 30],'HorizontalAlignment','left','String',VH(check(5)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 180 80 80],'HorizontalAlignment','left','String',VH(check(5)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [810 660 120 30],'HorizontalAlignment','left','String',VH(check(5)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 180 80 80],'HorizontalAlignment','left','String',VH(check(5)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [985 660 120 30],'HorizontalAlignment','left','String',VH(check(6)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 90 80 80],'HorizontalAlignment','left','String',VH(check(6)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [985 660 120 30],'HorizontalAlignment','left','String',VH(check(6)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 90 80 80],'HorizontalAlignment','left','String',VH(check(6)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [1140 660 120 30],'HorizontalAlignment','left','String',VH(check(7)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 -10 80 80],'HorizontalAlignment','left','String',VH(check(7)),'FontSize',8,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [1140 660 120 30],'HorizontalAlignment','left','String',VH(check(7)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',Cluster_Window,'Style','text','Position', [15 -10 80 80],'HorizontalAlignment','left','String',VH(check(7)),'FontSize',8,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
             
             XPOS = [0.1 0.22 0.34 0.46 0.58 0.7 0.82];
             YPOS = [0.81 0.68 0.55 0.42 0.29 0.16 0.03];
@@ -9082,13 +8377,13 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         
         %Main Window header
-        uicontrol('Parent', DetektionRefinementWindow,'Style', 'text','Position', [180 460 250 20],'HorizontalAlignment','center','String','Identified Clusters','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent', DetektionRefinementWindow,'Style', 'text','Position', [800 460 250 20],'HorizontalAlignment','center','String','Refined Spikes','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent', DetektionRefinementWindow,'Style', 'text','Position', [800 235 250 20],'HorizontalAlignment','center','String','Detected Noise Events','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent', DetektionRefinementWindow,'Style', 'text','Position', [180 460 250 20],'HorizontalAlignment','center','String','Identified Clusters','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent', DetektionRefinementWindow,'Style', 'text','Position', [800 460 250 20],'HorizontalAlignment','center','String','Refined Spikes','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent', DetektionRefinementWindow,'Style', 'text','Position', [800 235 250 20],'HorizontalAlignment','center','String','Detected Noise Events','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Button-Area
-        RefinementPanel=uipanel('Parent',DetektionRefinementWindow,'Units','pixels','Position',[10 500 590 100],'BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'General:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        RefinementPanel=uipanel('Parent',DetektionRefinementWindow,'Units','pixels','Position',[10 500 590 100],'BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'General:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Start Calculation
         uicontrol('Parent',RefinementPanel,'Position',[455 30 80 20],'String','Start','FontSize',11,'FontWeight','bold','callback',@Start_SR);
@@ -9097,45 +8392,45 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         uicontrol('Parent',RefinementPanel,'Position',[415 5 160 20],'String','Submit to Dr.Cell','FontSize',11,'FontWeight','bold','callback',@Submit);
         
         %Electrode Selection
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[15 52 100 20],'HorizontalAlignment','left','String','Electrode: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[15 52 100 20],'HorizontalAlignment','left','String','Electrode: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[98 25 50 50],'Tag','Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Value',1,'Style','popupmenu','callback',@recalculate);
         
         %Apply Expectation Maximation Algorithm
-        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[15 23 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','EM_GM','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[40 25 150 14],'HorizontalAlignment','left','String','Expectation Maximation','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[15 23 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','EM_GM','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[40 25 150 14],'HorizontalAlignment','left','String','Expectation Maximation','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %Apply EM k-means Algorithm
-        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[15 4 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','EM_k-means','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[40 6 150 14],'HorizontalAlignment','left','String','EM k-means','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[15 4 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','EM_k-means','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[40 6 150 14],'HorizontalAlignment','left','String','EM k-means','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %FPCA Features
-        uicontrol ('Parent',RefinementPanel,'Units','Pixels','Position',[190 61 20 15],'HorizontalAlignment','left','FontSize',8,'Tag','FPCA','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style','text','Position',[215 63 150 14],'HorizontalAlignment','left','String','FPCA Features','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',RefinementPanel,'Units','Pixels','Position',[190 61 20 15],'HorizontalAlignment','left','FontSize',8,'Tag','FPCA','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style','text','Position',[215 63 150 14],'HorizontalAlignment','left','String','FPCA Features','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %Wavelets on/off
-        uicontrol ('Parent',RefinementPanel,'Units','Pixels','Position',[190 42 20 15],'HorizontalAlignment','left','FontSize',8,'Tag','Wavelet','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[215 44 150 14],'HorizontalAlignment','left','String','Wavelet Packet Analysis','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol ('Parent',RefinementPanel,'Units','Pixels','Position',[190 42 20 15],'HorizontalAlignment','left','FontSize',8,'Tag','Wavelet','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[215 44 150 14],'HorizontalAlignment','left','String','Wavelet Packet Analysis','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %Manual or automatic Features
-        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[190 23 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','manual','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[215 25 150 14],'HorizontalAlignment','left','String','Manual Features','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[190 23 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','manual','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[215 25 150 14],'HorizontalAlignment','left','String','Manual Features','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         % Shapes Window Dimension
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [392 55 80 20],'HorizontalAlignment','left','String', 'Spike Time: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [392 55 80 20],'HorizontalAlignment','left','String', 'Spike Time: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[472 48 50 30],'Tag','SR_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','callback',@recalculate);
         uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[527 48 50 30],'Tag','SR_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','callback',@recalculate);
         
         %Refine discarded Events
-        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[190 4 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','discard','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[215 6 150 14],'HorizontalAlignment','left','String','Refine discarded Signals','FontSize',8,'BackgroundColor',[0.89 0.89 0.99]);
+        uicontrol('Parent',RefinementPanel,'Units','Pixels','Position',[190 4 20 20],'HorizontalAlignment','left','FontSize',10,'Tag','discard','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',RefinementPanel,'Style', 'text','Position',[215 6 150 14],'HorizontalAlignment','left','String','Refine discarded Signals','FontSize',8,'BackgroundColor', GUI_Color_BG);
         
         %Feature-Area
-        FeaturePanel=uipanel('Parent',DetektionRefinementWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor',[0.89 0.89 0.99],'Tag','FeaturePanel','Visible','on');
-        uicontrol('Parent',FeaturePanel,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        FeaturePanel=uipanel('Parent',DetektionRefinementWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor', GUI_Color_BG,'Tag','FeaturePanel','Visible','on');
+        uicontrol('Parent',FeaturePanel,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
-        FeaturePanel2=uipanel('Parent',DetektionRefinementWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor',[0.89 0.89 0.99],'Tag','FeaturePanel2','Visible','off');
-        uicontrol('Parent',FeaturePanel2,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-        uicontrol('Parent',FeaturePanel2,'Style', 'text','Position', [200 10 200 50],'HorizontalAlignment','left','String', 'FPCA Features','FontSize',18,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+        FeaturePanel2=uipanel('Parent',DetektionRefinementWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor', GUI_Color_BG,'Tag','FeaturePanel2','Visible','off');
+        uicontrol('Parent',FeaturePanel2,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+        uicontrol('Parent',FeaturePanel2,'Style', 'text','Position', [200 10 200 50],'HorizontalAlignment','left','String', 'FPCA Features','FontSize',18,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
         
         %Automated Feature Selection
         uicontrol('Parent',FeaturePanel,'Units','Pixels','Position', [15 50 150 20],'HorizontalAlignment','left','Tag','F1','FontSize',8,'String',V,'Value',1,'Style','popupmenu','Enable','on');
@@ -9278,8 +8573,8 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             XX2(:,:) = Shapes_temp(Class==1,1,:);
             Spike_Cluster =mean(SPIKES3D_temp(Class~=1,1,2))<= mean(SPIKES3D_temp(Class==1,1,2));
             
-            uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [100 75 130 18],'HorizontalAlignment','left','String','Original Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [210 75 50 18],'HorizontalAlignment','left','String',size(nonzeros(SPIKES3D_temp(:,1,1))),'FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [100 75 130 18],'HorizontalAlignment','left','String','Original Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [210 75 50 18],'HorizontalAlignment','left','String',size(nonzeros(SPIKES3D_temp(:,1,1))),'FontSize',10,'FontWeight','bold','ForegroundColor','r','BackgroundColor', GUI_Color_BG);
             waitbar(1,w,'Done');
             close(w);
             
@@ -9319,8 +8614,8 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 xlabel ('time / ms');
                 ylabel({'Voltage / uV'});
                 
-                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [290 75 130 20],'HorizontalAlignment','left','String','Refined Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [395 75 50 20],'HorizontalAlignment','left','String',size(XX1,1),'FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [290 75 130 20],'HorizontalAlignment','left','String','Refined Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [395 75 50 20],'HorizontalAlignment','left','String',size(XX1,1),'FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor', GUI_Color_BG);
                 
                 
                 XX1=[];
@@ -9339,8 +8634,8 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 xlabel ('time / ms');
                 ylabel({'Voltage / uV'});
                 
-                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [290 75 130 20],'HorizontalAlignment','left','String','Refined Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [395 75 50 20],'HorizontalAlignment','left','String',size(XX2,1),'FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [290 75 130 20],'HorizontalAlignment','left','String','Refined Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',RefinementPanel,'Style', 'text','Position', [395 75 50 20],'HorizontalAlignment','left','String',size(XX2,1),'FontSize',10,'FontWeight','bold','ForegroundColor','b','BackgroundColor', GUI_Color_BG);
                 
                 XX1=[];
                 XX2=[];
@@ -10608,7 +9903,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 set(findobj('Tag','CELL_slider'),'value',size(RAW.M,2)-Elektrode - scroll_bar);   % Position of Scrollbar
                 for v = 1:4
                     uicontrol('style', 'text',...
-                        'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [25 450-(v-1)*120 50 25],...
+                        'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [25 450-(v-1)*120 50 25],...
                         'Parent', bottomPanel, 'Tag', 'ShowElNames','String', EL_NAMES(Elektrode+v-1-(3-scroll_bar)));
                     delete (SubMEA_vier(v));
                     SubMEA_vier(v)=subplot(4,1,v,'Parent',mainWindow);
@@ -10641,11 +9936,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                         set(findobj('Tag','ShowSpikesBurstsperEL','Parent',t5),'Visible','on');
                         
                         %show Nr. of Spikes (AD)
-                        uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-(v-1)*120 30 20],...
+                        uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-(v-1)*120 30 20],...
                             'Parent', bottomPanel, 'Tag', 'ShowSpikesBurstsperEL','String', NR_SPIKES(Elektrode+v-1-(3-scroll_bar)));
                         
                         %Show Nr. of Bursts
-                        uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-(v-1)*120 30 20],...
+                        uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-(v-1)*120 30 20],...
                             'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', 0);
                         
                         if get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t5),'value') && get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t6),'value');       % Spikes
@@ -10673,7 +9968,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 set(findobj('Tag','CELL_slider'),'value',size(RAW.M,2)-Elektrode - 3);   % Position of Scrollbar
                 for v = 1:4
                     uicontrol('style', 'text',...
-                        'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [25 450-(v-1)*120 50 25],...
+                        'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 12,'units', 'pixels', 'position', [25 450-(v-1)*120 50 25],...
                         'Parent', bottomPanel, 'Tag', 'ShowElNames','String', EL_NAMES(Elektrode+v-1));
                     delete (SubMEA_vier(v));
                     SubMEA_vier(v)=subplot(4,1,v,'Parent',mainWindow);
@@ -10706,11 +10001,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                         set(findobj('Tag','ShowSpikesBurstsperEL','Parent',t5),'Visible','on');
                         
                         %show Nr. of Spikes (AD)
-                        uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-(v-1)*120 30 20],...
+                        uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-(v-1)*120 30 20],...
                             'Parent', bottomPanel, 'Tag', 'ShowSpikesBurstsperEL','String', NR_SPIKES(Elektrode+v-1));
                         
                         %show Nr. of Bursts (AD)
-                        uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-(v-1)*120 30 20],...
+                        uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-(v-1)*120 30 20],...
                             'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', 0);
                         
                         if get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t5),'value') && get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t6),'value');       % Spikes
@@ -10767,13 +10062,13 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             
             if Elektrode <= 8
                 Elzeile = strcat('El X ',num2str(Elektrode));
-                uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 11,'units', 'pixels', 'position', [30 525-Elektrode*57 60 25],...
+                uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 11,'units', 'pixels', 'position', [30 525-Elektrode*57 60 25],...
                     'Parent', bottomPanel_zwei, 'String', Elzeile);
             end
             
             if Elektrode <= 8
                 Elspalte = strcat({'El '}, num2str(Elektrode),{'X'});
-                uicontrol('style', 'text','BackgroundColor', [0.89 0.89 0.99],'FontSize', 11,'units', 'pixels', 'position', [54+Elektrode*121 520 60 25],...
+                uicontrol('style', 'text','BackgroundColor', GUI_Color_BG,'FontSize', 11,'units', 'pixels', 'position', [54+Elektrode*121 520 60 25],...
                     'Parent', bottomPanel_zwei, 'String', Elspalte);
             end
             
@@ -10800,11 +10095,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             set(findobj('Tag','ShowSpikesBurstsperEL','Parent',t5),'Visible','on');
             
             %show Nr. of Spikes (AD)
-            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-(Graph-1)*120 30 20],...
+            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 462-(Graph-1)*120 30 20],...
                 'Parent', bottomPanel, 'Tag', 'ShowSpikesBurstsperEL','String', NR_SPIKES(Elektrode));
             
             %show Nr. of Bursts (AD)
-            uicontrol('style', 'text', 'BackgroundColor', [0.89 0.89 0.99],'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-(Graph-1)*120 30 20],...
+            uicontrol('style', 'text', 'BackgroundColor', GUI_Color_BG,'HorizontalAlignment','left','FontSize', 8,'units', 'pixels', 'position', [1150 432-(Graph-1)*120 30 20],...
                 'Parent', bottomPanel,'Tag', 'ShowSpikesBurstsperEL','String', 0);
             
             if get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t5),'value') && get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t6),'value');       % Spikes
@@ -11237,15 +10532,15 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 
                 
                 %Main Window header
-                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [180 455 250 20],'HorizontalAlignment','center','String','Identified Clusters','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [600 455 250 20],'HorizontalAlignment','center','String','Cluster 1','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [600 230 250 20],'HorizontalAlignment','center','String','Cluster 2','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [180 455 250 20],'HorizontalAlignment','center','String','Identified Clusters','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [600 455 250 20],'HorizontalAlignment','center','String','Cluster 1','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [600 230 250 20],'HorizontalAlignment','center','String','Cluster 2','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 uicontrol('Parent',SpikeSortingWindow,'Position', [1120 460 70 20],'String','Submit','FontSize',11,'FontWeight','bold','callback',@ S_Submitbutton_top);
                 uicontrol('Parent',SpikeSortingWindow,'Position', [1120 235 70 20],'String','Submit','FontSize',11,'FontWeight','bold','callback',@ S_Submitbutton_bottom);
                 
                 %Button-Area
-                SortingPanel=uipanel('Parent',SpikeSortingWindow,'Units','pixels','Position',[10 500 590 100],'BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [15 73 100 20],'HorizontalAlignment','left','String', 'General:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                SortingPanel=uipanel('Parent',SpikeSortingWindow,'Units','pixels','Position',[10 500 590 100],'BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [15 73 100 20],'HorizontalAlignment','left','String', 'General:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 
                 %Start Calculation
                 uicontrol('Parent',SortingPanel,'Position',[490 5 80 20],'String','Start','FontSize',11,'FontWeight','bold','callback',@start_sorting);
@@ -11254,48 +10549,48 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
                 uicontrol('Parent',SortingPanel,'Position',[490 25 80 20],'String','Submit all','FontSize',11,'FontWeight','bold','callback',@S_Submitbutton_all);
                 
                 %Apply Expectation Maximation Algorithm
-                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 70 170 20],'HorizontalAlignment','left','String','Expectation Maximation','FontSize',9,'Tag','S2_EM_GM','Value',1,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 70 170 20],'HorizontalAlignment','left','String','Expectation Maximation','FontSize',9,'Tag','S2_EM_GM','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG);
                 
                 %Apply EM k-means Algorithm
-                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 50 150 20],'HorizontalAlignment','left','String','EM k-means','FontSize',9,'Tag','S2_EM_k-means','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 50 150 20],'HorizontalAlignment','left','String','EM k-means','FontSize',9,'Tag','S2_EM_k-means','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
                 
                 
                 %Shapes Window Dimension
-                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [385 45 80 20],'HorizontalAlignment','left','String', 'Window: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [385 45 80 20],'HorizontalAlignment','left','String', 'Window: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[465 38 50 30],'Tag','Sort_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','callback',@recalculate);
                 uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[520 38 50 30],'Tag','Sort_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','callback',@recalculate);
                 
                 %Manual or automatic Features
-                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 30 150 20],'HorizontalAlignment','left','String','Manual Features','FontSize',9,'Tag','S2_manual','Value',0,'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 30 150 20],'HorizontalAlignment','left','String','Manual Features','FontSize',9,'Tag','S2_manual','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG);
                 
                 %FPCA Features
-                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 10 150 20],'HorizontalAlignment','left','String','FPCA Features','FontSize',9,'Tag','S2_FPCA','Value',get(findobj('Tag','S_FPCA'),'value'),'Style','checkbox','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Units','Pixels','Position',[270 10 150 20],'HorizontalAlignment','left','String','FPCA Features','FontSize',9,'Tag','S2_FPCA','Value',get(findobj('Tag','S_FPCA'),'value'),'Style','checkbox','BackgroundColor', GUI_Color_BG);
                 
                 %Feature-Area
-                SortingFeaturePanel=uipanel('Parent',SpikeSortingWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor',[0.89 0.89 0.99],'Tag','SortingFeaturePanel');
-                uicontrol('Parent',SortingFeaturePanel,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                SortingFeaturePanel=uipanel('Parent',SpikeSortingWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor', GUI_Color_BG,'Tag','SortingFeaturePanel');
+                uicontrol('Parent',SortingFeaturePanel,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 
-                SortingFeaturePanel2=uipanel('Parent',SpikeSortingWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor',[0.89 0.89 0.99],'Tag','SortingFeaturePanel2');
-                uicontrol('Parent',SortingFeaturePanel2,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',SortingFeaturePanel2,'Style', 'text','Position', [200 10 200 50],'HorizontalAlignment','left','String', 'FPCA Features','FontSize',18,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                SortingFeaturePanel2=uipanel('Parent',SpikeSortingWindow,'Units','pixels','Position',[600 500 590 100],'BackgroundColor', GUI_Color_BG,'Tag','SortingFeaturePanel2');
+                uicontrol('Parent',SortingFeaturePanel2,'Style', 'text','Position', [15 75 100 20],'HorizontalAlignment','left','String', 'Features:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',SortingFeaturePanel2,'Style', 'text','Position', [200 10 200 50],'HorizontalAlignment','left','String', 'FPCA Features','FontSize',18,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 
                 %Cluster Number Selection
-                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [140 68 70 20],'HorizontalAlignment','left','String', 'Cluster Nr.:','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [140 68 70 20],'HorizontalAlignment','left','String', 'Cluster Nr.:','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 uicontrol ('Parent',SortingPanel,'Units','Pixels','Position', [220 71 30 20],'Tag','S2_K_Nr','HorizontalAlignment','right','FontSize',9,'Value',1,'String',0,'Style','edit');
                 
                 %Confidence in %
-                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [430 68 105 20],'HorizontalAlignment','left','String', 'Confidence in %','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SortingPanel,'Style', 'text','Position', [430 68 105 20],'HorizontalAlignment','left','String', 'Confidence in %','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 uicontrol ('Parent',SortingPanel,'Units','Pixels','Position', [540 71 30 20],'Tag','confidence','HorizontalAlignment','right','FontSize',9,'Value',1,'String',0,'Style','edit');
                 
                 %Select-Button-Area
-                S_SelectPanel = uipanel('Parent',SortingPanel,'Units','pixels','Position',[1 1 250 65],'BackgroundColor',[0.89 0.89 0.99]);
-                uicontrol('Parent',S_SelectPanel,'Style','text','Position', [13 40 150 20],'HorizontalAlignment','left','String','Select Cluster:','FontSize',11,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                S_SelectPanel = uipanel('Parent',SortingPanel,'Units','pixels','Position',[1 1 250 65],'BackgroundColor', GUI_Color_BG);
+                uicontrol('Parent',S_SelectPanel,'Style','text','Position', [13 40 150 20],'HorizontalAlignment','left','String','Select Cluster:','FontSize',11,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 
                 uicontrol('Parent',S_SelectPanel,'Position', [15 13 80 20],'String','Select','FontSize',11,'FontWeight','bold','callback',@S_Sel);
                 uicontrol('Parent',S_SelectPanel,'Position', [155 13 80 20],'String','Show','FontSize',11,'FontWeight','bold','callback',@S_ShowClass);
                 
                 %Electrode Selection
-                uicontrol('Parent',S_SelectPanel,'Style', 'text','Position',[135 38 50 20],'HorizontalAlignment','left','String','Graph: ','FontSize',10,'FontWeight','bold','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',S_SelectPanel,'Style', 'text','Position',[135 38 50 20],'HorizontalAlignment','left','String','Graph: ','FontSize',10,'FontWeight','bold','BackgroundColor', GUI_Color_BG);
                 uicontrol('Parent',S_SelectPanel,'Units','Pixels','Position',[185 10 50 50],'Tag','S_Graph_choice','FontSize',8,'String',[{'Top'} {'Bottom'}],'Value',1,'Style','popupmenu','callback',@recalculate);
                 
                 
@@ -11386,11 +10681,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             XX2(:,:) = Shapes_temp(Class == 2,1,:);
             Spike_Cluster = (mean(min(XX1,[],2))<= (mean(min(XX2,[],2))));
             
-            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [850 455 70 20],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 455 70 20],'HorizontalAlignment','left','String',size(XX1,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [850 455 70 20],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 455 70 20],'HorizontalAlignment','left','String',size(XX1,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor', GUI_Color_BG);
             
-            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [850 230 70 20],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor',[0.89 0.89 0.99]);
-            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 230 70 20],'HorizontalAlignment','left','String',size(XX2,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor',[0.89 0.89 0.99]);
+            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [850 230 70 20],'HorizontalAlignment','left','String','Spikes:','FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor', GUI_Color_BG);
+            uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 230 70 20],'HorizontalAlignment','left','String',size(XX2,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor', GUI_Color_BG);
             
             waitbar(1,w,'Done');
             close(w);
@@ -11481,11 +10776,11 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
             XX(:,:)=Shapes((Class==Class(Spike)),Elektrode,:);
             if get(findobj('Tag','S_Graph_choice'),'value') == 1
                 Spikeplot1 = subplot('Position',[0.55 0.47 0.44 0.28]);
-                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 455 70 20],'HorizontalAlignment','left','String',size(XX,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 455 70 20],'HorizontalAlignment','left','String',size(XX,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor', GUI_Color_BG);
                 Spkplot1 = Class(Spike); % storage of displayed Cluster Number
             else
                 Spikeplot2 = subplot('Position',[0.55 0.09 0.44 0.28]);
-                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 230 70 20],'HorizontalAlignment','left','String',size(XX,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor',[0.89 0.89 0.99]);
+                uicontrol('Parent',SpikeSortingWindow,'Style', 'text','Position', [925 230 70 20],'HorizontalAlignment','left','String',size(XX,1),'FontSize',10,'FontWeight','bold','ForegroundColor','black','BackgroundColor', GUI_Color_BG);
                 Spkplot2 = Class(Spike); % storage of displayed Cluster Number
                 xlabel ('time / ms');
             end
@@ -11852,10 +11147,10 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
 %functions - Tab Export
 %----------------------------------------------------------------------
 
-% --- Export xls-Button (CN)-------------------------------------------
+% --- Export xls-Button (CN,SDB,MC)-------------------------------------------
     function safexlsButtonCallback(source,event)  %#ok<INUSD>
         
-        title = [full_path(1:(length(full_path)-4)),'.xls'];  % Name and path for the xls-Export-file
+        %title = [full_path(1:(length(full_path)-4)),'.xls'];  % Name and path for the xls-Export-file
         
         % mean & std amplitude for each electrode
         if ~isempty(AMPLITUDES)
@@ -11881,19 +11176,25 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         else i = 12;
         end
         
-        %cd(path)
-        [filename, pathname] = uiputfile ('*.xls','save as...',title);
+        [~,filenameWoExt,~] = fileparts(file);
+        cd(myPath)
+        [filename, pathname] = uiputfile ('*.xls','save as...',[myPath filesep filenameWoExt]);
         if filename==0, return,end
         tic
         h = waitbar(0,'please wait, save data...');
         waitbar(0.2/i)
+        
+        % automatically save _TS.mat files as they are needed for automatic analysis
+        saveSpikes([myPath filesep filenameWoExt '_TS.mat'],SPIKEZ)
         
         excle_cells=cell(1,1);
         
         
         excle_cells{2,1}=full_path;
         %xlswrite([pathname filename], {full_path}, 'Tabelle1','A2');
-        if ~isempty(fileinfo); excle_cells{3,1}=fileinfo{1}; end
+        if ~isempty(fileinfo)
+            if iscell(fileinfo); excle_cells{3,1}=fileinfo{1}; end
+        end
         %xlswrite([pathname filename], fileinfo{1}, 'Tabelle1','A3');
         
         waitbar(0.5/i);
@@ -12014,7 +11315,8 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         
         
         % Synchronization Measure:
-        if ~isfield(SYNC,'SC'); STRUCT.S=SpikeContrast(SPIKEZ.TS,rec_dur); SYNC.SC=STRUCT.S; end % spike-contrast is calculated
+        STRUCT.S=SpikeContrast(SPIKEZ.TS,rec_dur);
+        SYNC.SC=STRUCT.S; % spike-contrast is calculated
         excle_cells{10,9}='Synchrony:';
         excle_cells{11,9}='Spike-Contrast:';
         if isfield(SYNC,'SC'); excle_cells{11,10}=SYNC.SC; end
@@ -12028,8 +11330,7 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
         if isfield(SYNC,'MI2'); excle_cells{15,10}=SYNC.MI2; end
         excle_cells{16,9}='PS:';
         if isfield(SYNC,'PS'); excle_cells{16,10}=SYNC.PS; end
-        %xlswrite([pathname filename], {'ES:'}, 'Tabelle1','I14');
-        %xlswrite([pathname filename], SYNC.ES, 'Tabelle1','J14');
+        
         
         waitbar(3/i);
         %xlswrite([pathname filename], {'to...'}, 'Tabelle1','E8');
@@ -12176,16 +11477,17 @@ d  = fdesign.notch('N,F0,Q,Ap',6,0.5,10,1);
 
 % --- Save Spikes as mat-file (MC) -----------------------------
     function SaveSpikesCallback(~,~)
-        [pathstr,filename,ext] = fileparts(file);
-        FILENAME=[filename '_TS.mat'];
+        [~,filename,~] = fileparts(file);
+        FILENAME=[myPath filesep filename '_TS.mat'];
         [filename, filepath] = uiputfile ('*.mat','save as...',FILENAME);
         if filename==0, return,end
         
-        cd(filepath)
         
-        temp.SPIKEZ=SPIKEZ;
-        save(filename, 'temp')
+        saveSpikes([filepath filesep filename],SPIKEZ);
+        
     end
+
+    
 
 
 %Funktionen - Tab About

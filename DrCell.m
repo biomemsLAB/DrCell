@@ -23,7 +23,20 @@
 %% ------------- ToDo ------------------------------------------------------
 %               - Merging Neuro and Cardio version, so functions like data
 %               import are common (MC)
-%               - Implement TSPE to estimate functional connections (MC)
+%               - Cardio: Zoom-Button3, error if no spike detection has
+%               been conducted yet (MC)
+%               - Cardio, line 5305, error: index is not an integer (MC)
+%               - Bugfix: getSpikePositions (fast version by Sh.Kh
+%               generated error for 60 MEA data) (MC)
+%               - Modify waitbar of "Filter" and "Threshold" to show
+%               progress of every electrode (MC)
+%               - Error: HDMEA raw signal loaded, then using Zoom button
+%               (MC)
+%               - Add "Sum of Bursts" to excel document (MM)
+%               - Add button after threshold tab that calculates all
+%               parameter (spike/burst/synchrony ect.) (MC)
+%               - when switching from 4 electrode view to all electrode
+%               view, the buttons (zoom, invert ect.) of the 4th plot are still visible (MC)
 
 %% ------------- Update History --------------------------------------------
 % Date          Description             (Signature)                        
@@ -138,35 +151,140 @@
 %               - Spikedetection: positive spikes now compatible with
 %               HDMEA-Mode (MC)
 % 22.02.2019    - Bugfix: Neuro+Cardio: import of non-HDMEA-data possible again (MC)
-
-
-           
-
+% 28.02.2019    - Added Networkburstdetection according to Jimbo's lab (no GUI yet) (MC)
+% 06.03.2019    - Bugfix: importing 60-El-MEA .dat data (MC)
+%               - Bugfix: calc. threshold for 60-El-MEA data (MC)
+%               - Added function: Import ".rhd" raw files possible (MC)
+% 14.03.2019    - Bugfix: Excel Export, 'fileinfo' not a cell for 3brain data (MC)
+% 22.03.2019    - Replaced global variable "path" with "myPath" as "path"
+%               is also a matlab function => conflict with 2018 matlab version (MC)
+% 02.04.2019    - support for Fileformat .h5 (= HDF5 format of Multichannel Systems) (MC)
+%               - Note: matlab addon "McsMatlabDataTools" has to be installed: Home -> Add-Ons -> Get Add-Ons -> search for "McsMatlabDataTools"
+%               Note: if .mcs file should be opened, then download "Multichannel DataManager" to convert .mcd to .h5
+%               - Added Button "Clear Artefacts" (MC)
+% 04.04.2019    - Bugfix: positive spikedetection for HDMEA data
+%               (digital2analog(M) was performed for negative and then for positive spikes again) (MC)
+%               - keep electrode selection when HDMEA mode is used (MC)
+% 05.04.2019    - Bugfix: opening .rhd files (MC)
+% 09.04.2019    - Bugfix: Amplitude values of HDMEA-data converted to digital values after spike detection (MC)
+%               - Bugfix: filename is updated in GUI in HDMEA mode (MC)
+%               - New Button: Postprocessing: "Connectivity" to estimate
+%               connectivity using TSPE by Stefano De Blasi et al., bug: currently does not find any connections (MC)
+%               - New Button: Postprocessing: "Spike-contrast" to visualize
+%               the process of calculating Spike-contrast. (MC)
+% 25.04.2019    - Reorganization of data import functions (MC)
+%               - Bufix: Load .dat data (MC)
+%               - Bugfix: redraw after spikedetection in HDMEA mode (MC)
+%               - Bugfix: Spike-contrast is calculated during excel export
+%               for all files (MC)
+% 26.04.2019    - Bugfix: time stamps detected by SWTEO had +1 sample offset so
+%               amplitude values were not correct (MC)
+%               - Connectivity estimation for 60 ch MEA works (with or without
+%               threshold) (MC)
+%               - New GUI style (white background) (MC)
+% 03.05.2019    - Graph theory added (small worldness ect.), not completely tested (MC)
+% 07.05.2019    - AutomatedAnalysisTool (TAB1) compatible with HDMEA-Data (MC)
+%               - Bugfix: Burstdetection (last burst not present) (MC)
+%               - some reorganization of file/folder names and orders (MC)
+% 09.05.2019    - Connectivity: Circular Graphs added (MC)
+% 13.05.2019    - AutomatedAnalysisTool: Compatibility with all file
+%               formats that are also supported by DrCell (MC)
+% 23.07.2019    - AutomatedAnalysisTool: Connectivity calculation added (not tested yet) (MC)
+% 19.08.2019    - AutomatedAnalysisTool: Threshold factor of loaded
+%               threshold file is used if GUI field is emtpy (now default value is 'empty') (MC)
+% 26.08.2019    - Added Button "Part. clear Signal" (Tab 2) to delete parts of the
+%               raw signal (MC) 
+%               - Added Button "Export File" (Tab 1) to save manipulated
+%               raw files (MC)
+% 14.10.2019    - Bugfix: CalcParameter_function -> ConnectivityTSPE ->
+%               .meanS.r3 changed to .mean = S.r3
+% 23.11.2019    - New Version of cSPIKE added (used to calculate
+%               SPIKEsynchro ect.). Compiled for win and linux (MC)
+% 26.11.2019    - Bugfix in SpikeTrainSet of cSPIKE (MC)
+% 06.02.2020    - better description of the function burstdetection.m (MC)    
+% 03.03.2020    - Bugfix in read_mat: Variable "Data" and "Time" not assigned (MC)
+% 04.03.2020    - Added Button "Quick Analysis" (MC)
+% 24.03.2020    - Bugfix Syncmeasure_PhaseSync: error when spike at first or at last position (MC)
+% 06.04.2020    - Update function "plotISI_Histogram": binMethod option added (MC)
+% 19.10.2020    - Postprocessing/Connectivity: only CM values > 2*std(CM) are plotted (MC)
+% 22.10.2020    - If Signal Processing Toolbox is not installed, load predefined filter (only highpass 50 Hz) (MC)
+% 28.10.2020    - If Statistics Toolbox is not installed, unse sdt() instead of normfit() 
+%               - Connectivity Button: new function: applyEasyThresholdToCM() (MC)
+% 28.10.2020    - Extention of function applyEasyThresholdToCM() (MC)
+% 06.11.2020    - Bugfix Spikedetection: one spike was detected on non-valid electrodes (threshold values of 10000) (MC)
+%               - Fixed layout for MCS data (.h5) (MC)
+%               - exclusion of old functions in post-processing tab which are not used anymore (MC)
+%               - Bugfix redraw_allinone: scrolling was not possible for SaRa of 25000 Hz -> changed int16 to int32 (MC)
+% 24.11.2020    - cleaning up some comments (MC)
+% 01.12.2020    - Inclusion of SyncMeasure_EarthMoversDistance (MC)
+% 26.02.2021    - change in function "TSPE.m", line 160: replace all NaNs to zeros (MC)
+% 12.03.2021    - change in function "CalcParameter_function.m": TSPE
+%               surrogate Threshold now calculates same graph theory measures such as TSPE without threshold (MC)
+% 16.03.2021    - Cardio Analysis Button (only for test purpose) (MC)
+%               - SpikeParameterCalculation.m: forced zero padding (MC)
+% 18.03.2021    - Added Cardio Analysis Button to the Cardio.m module (MC)
+%               - changed SpikeContrast_figure.m to calculate smaller bin sizes of 1 ms (MC)
+% 23.03.2021    - Bugfix in Cardio/Postprocessing/Signalprocessing (MC) 
+% 13.04.2021    - Cardio Quick Analysis Button: added velocity calculation and automatically delete assynchonous electrodes (MC)
+% 22.04.2021    - Cardio: Tab 10 "Tools" added, AutomatedAnalysisTool extended with a Cardio-spikedetection mode (MC)
+% 30.04.2021    - Cardio: AutomatedAnalysisTool extended with CardioFeatureCalculation (till now, only Velocity is usable) (MC)
+%               - The term "parameter" has been changed to "features" in all functions (MC)
+% 01.05.2021    - Neuro: CardioAnalysisButton added. Cardio-Signalprocessing button added (MC)
+%               - AutomatedAnalysisTool: extended CardioFeatureCalculation (Beatrate, ISI, Amp) (MC)
+% 13.07.2021    - Cardio: Major Bugfixes in CardioAnalysisTool. Spike amplitudes fixed (MC)
+% 14.07.2021    - Bugfix: AutomatedAnalysisTool, too many input arguments in functino "applyRefractoryAndGetAmplitudes()" (MC)
+% 15.07.2021    - Bugfix: AutomatedAnalysisTool, loading threshold files without error message (MC)
+%               - AutomatedAnalysisTool: one threshold file per folder was required. Now also a tresholdfile for each file is working and automatically detected (MC)
+%               - Bufix: CardioAnalysis: correct empty spike train handling (MC)
+% 31.08.2021    - getAllGraphParameter: replaced nanmax to max (MC)
 
 function DrCell() 
 
-DrCellVersion = '20190222';
+close all;
+clear all;
+clc
+
+DrCellVersion = '20210831';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
 global Window
+global GUI_Color_BG GUI_Color_NeuroButton GUI_Color_CardioButton
+
+% --- Set GUI Color ---
+GUI_Color_BG = [1 1 1]; % white 
+GUI_Color_NeuroButton = ([0 204 187]+50)/255; % green
+GUI_Color_CardioButton = ([89 189 207]+40)/255; % blue
+set(0,'DefaultUicontrolBackgroundColor',GUI_Color_BG);
+set(0,'DefaultFigureColor',GUI_Color_BG);
+
 % ---------------------------------------------------------------------
 % --- GUI -------------------------------------------------------------
 % ---------------------------------------------------------------------
 
 % Window
-Window = figure('Position',[300 500 400 100],'Tag','Dr.CELL','Name',['Dr.Cell ' DrCellVersion],'NumberTitle','off','Toolbar','none','Resize','off','Color',[0.89 0.89 0.99]);
+set(0,'units','pixels')  
+screenSize = get(0,'screensize'); %Obtains this pixel information
+Window = figure('Position',[800 screenSize(4)/2 400 100],'Tag','Dr.CELL','Name',['Dr.Cell ' DrCellVersion],'NumberTitle','off','Toolbar','none','Resize','off','Color',GUI_Color_BG);
 
 % Buttons:
 % "Neuro" - Button
-uicontrol('Units','pixels','Position',[8 66 180 24],'Tag','CELL_openFileButton','String','NEURO','FontSize',9,'TooltipString','Open Neuro-Modul to analyse neuronal signals.','Callback',@NeuroButtonCallback);
+uicontrol('Units','pixels','Position',[8 66 180 24],'Tag','CELL_openFileButton','String','NEURO','FontSize',8,'fontweight', 'bold','TooltipString','Open Neuro-Modul to analyse neuronal signals.','BackgroundColor',GUI_Color_NeuroButton,'Callback',@NeuroButtonCallback);
 
 % Buttons:
 % "Cardio" - Button
-uicontrol('Units','pixels','Position',[200 66 180 24],'Tag','CELL_openFileButton','String','CARDIO','FontSize',9,'TooltipString','Open Cardio-Modul to analyse cardio-signals.','Callback',@CardioButtonCallback);
+uicontrol('Units','pixels','Position',[200 66 180 24],'Tag','CELL_openFileButton','String','CARDIO','FontSize',8,'fontweight', 'bold','TooltipString','Open Cardio-Modul to analyse cardio-signals.','BackgroundColor',GUI_Color_CardioButton,'Callback',@CardioButtonCallback);
+
 
 setPaths % include all needed files into MATLAB search path
 
+
+
+
+% DrCell logo
+panax2 = axes('Parent', Window, 'Units','normalized', 'Position', [0.25 0 0.5 0.5]);
+[img] = imread('biomems.tif');
+imshow(img,'Parent',panax2,'InitialMagnification','fit');
 
 %% Functions
 %----------------------------------------------------------------------
