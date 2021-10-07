@@ -25,8 +25,8 @@ S.D = D; % mean node degree
 
 if flag_binary % if binary
     [S_pos,S_neg,vpos,vneg]=strengths_und_sign(C_w_d_sign); % brain connectivity toolbox, Spos/Sneg: nodal strength of positive/negative weights; vpos/vneg: total positive/negative weight
-    CP_dist = distance_bin(C_b_d); % Matrix, BCT
-    S.CP = charpath(CP_dist); % Scalar
+    S.Dis = distance_bin(C_b_d); % Matrix, BCT
+    S.CP = charpath(S.Dis); % Scalar
     S.E = efficiency_bin(C_b_d,0); % Scalar
     S.r1 = assortativity_bin(C_b_d,1); % brain connectivity toolbox, 1: out-strength/in-strength correlation
     S.r2 = assortativity_bin(C_b_d,2); % brain connectivity toolbox, 2: in-strength/out-strength correlation
@@ -54,8 +54,8 @@ if flag_binary % if binary
     S.PC2 = mean(PC2);
     S.T = transitivity_bd(C_b_d); % Scalar, BCT
 else % if weighted
-    CP_dist = distance_wei(weight_conversion(C_w_d, 'lengths')); % Matrix, BCT
-    S.CP = charpath(CP_dist); % Scalar
+    S.Dis = distance_wei(weight_conversion(C_w_d, 'lengths')); % Matrix, BCT
+    S.CP = charpath(S.Dis); % Scalar
     S.E = efficiency_wei(weight_conversion(C_w_d, 'lengths'),0); % Scalar
     S.r1 = assortativity_wei(C_w_d,1); % brain connectivity toolbox, 1: out-strength/in-strength correlation
     S.r2 = assortativity_wei(C_w_d,2); % brain connectivity toolbox, 2: in-strength/out-strength correlation

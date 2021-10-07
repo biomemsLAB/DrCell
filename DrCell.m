@@ -237,6 +237,7 @@
 %               - AutomatedAnalysisTool: one threshold file per folder was required. Now also a tresholdfile for each file is working and automatically detected (MC)
 %               - Bufix: CardioAnalysis: correct empty spike train handling (MC)
 % 31.08.2021    - getAllGraphParameter: replaced nanmax to max (MC)
+% 21.09.2021    - added Folder "Tutorial" and a script which show how to use DrCell functions in a script (MC)
 
 function DrCell() 
 
@@ -244,7 +245,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20210831';
+DrCellVersion = '20210921';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 

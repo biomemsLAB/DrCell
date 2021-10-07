@@ -4990,7 +4990,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         h_wait=waitbar(0.1,'Analyse...');
         
-        if (get(findobj('Tag','Spike_Box'),'value')) == 1
+        if (get(findobj('Tag','Spike_Box'),'value')) == 1 || (get(findobj('Tag','Spike2_Box'),'value')) == 1
             NR_SPIKES=zeros(1,size(RAW.M,2));
             BURSTS.BRn=zeros(1,size(RAW.M,2));
             waitbar(.5,h_wait,'Please wait - Spikedetection in progress...')
