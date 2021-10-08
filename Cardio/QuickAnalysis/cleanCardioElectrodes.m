@@ -1,7 +1,9 @@
-% --- Clean Cardio electrodes 
-% 1) delete all electrodes with less then 3 spikes per minute
-% 2) delete non-median electrodes (e.g. if most electrodes show 50 spikes
+% --- Clean Cardio electrodes
+% 1) delte all spikes which occur at the same time (=artefacts)
+% 2) delete all electrodes with less then 3 spikes per minute
+% 3) delete non-median electrodes (e.g. if most electrodes show 50 spikes
 % per minute, delete all electrodes with a different number of spikes per minute)
+% 4) delete all spike trains which are not synchronous to other spike trains
 
 function [SPIKEZ]=cleanCardioElectrodes(SPIKEZ)
 
@@ -10,14 +12,18 @@ rec_dur = SPIKEZ.PREF.rec_dur;
 % zero padding
 [SPIKEZ.TS,SPIKEZ.AMP] = zeroPadding(SPIKEZ.TS,SPIKEZ.AMP);
 
-% Delte low FR
+% 1) Delete Artefacts that occur "at the same time" (if delta t <= 0.0002 s)
+dt = 0.0002;
+[SPIKEZ.TS,SPIKEZ.AMP] = cardioDeleteSameTime(SPIKEZ.TS,SPIKEZ.AMP,dt);
+
+% 2) Delte low FR
 minFR=3;
 [SPIKEZ.TS,SPIKEZ.AMP] = cardioDeleteLowFR(SPIKEZ.TS,SPIKEZ.AMP,SPIKEZ.PREF.rec_dur,minFR);
 
-% Delete non-median electrodes
+% 3) Delete non-median electrodes
 [SPIKEZ.TS,SPIKEZ.AMP,numSpikes] = cardioDeleteNonMedianElectrodes(SPIKEZ.TS,SPIKEZ.AMP);
 
-% Delete non-synchronous electrodes
+% 4) Delete non-synchronous electrodes
 synchrony_matrix=cardioPairwiseSynchrony(SPIKEZ,rec_dur);
 %cardioDetectCluster(synchrony_matrix)
 [SPIKEZ.TS,SPIKEZ.AMP] = cardioDeleteNonSynchronousElectrodes(SPIKEZ.TS,SPIKEZ.AMP,synchrony_matrix);

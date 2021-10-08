@@ -12,7 +12,7 @@ TS(TS==0)=NaN;
 % 2) sorting
 for n=1:size(TS,2)
     [TS(:,n), idx] = sort(TS(:,n));
-    AMP(idx,n) = AMP(:,n);
+    AMP(:,n) = AMP(idx,n);
 end
 
 % 3) all NaNs to zeros

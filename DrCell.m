@@ -238,6 +238,7 @@
 %               - Bufix: CardioAnalysis: correct empty spike train handling (MC)
 % 31.08.2021    - getAllGraphParameter: replaced nanmax to max (MC)
 % 21.09.2021    - added Folder "Tutorial" and a script which show how to use DrCell functions in a script (MC)
+% 08.10.2021    - add function cardioDeleteSameTime.m and fix bug in zeroPadding.m (MC)
 
 function DrCell() 
 
@@ -245,7 +246,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20210921';
+DrCellVersion = '20211008';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
