@@ -13,8 +13,8 @@ rec_dur = SPIKEZ.PREF.rec_dur;
 [SPIKEZ.TS,SPIKEZ.AMP] = zeroPadding(SPIKEZ.TS,SPIKEZ.AMP);
 
 % 1) Delete Artefacts that occur "at the same time" (if delta t <= 0.0002 s)
-dt = 0.0002;
-[SPIKEZ.TS,SPIKEZ.AMP] = cardioDeleteSameTime(SPIKEZ.TS,SPIKEZ.AMP,dt);
+%dt = 0.0002;
+%[SPIKEZ.TS,SPIKEZ.AMP] = cardioDeleteSameTime(SPIKEZ.TS,SPIKEZ.AMP,dt);
 
 % 2) Delte low FR
 minFR=3;
