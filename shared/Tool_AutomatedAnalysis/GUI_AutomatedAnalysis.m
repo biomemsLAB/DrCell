@@ -242,6 +242,9 @@ hp4_2 = uipanel('Parent',tab4,'Title','Group','Position',[.05 .05 .95 .5],'Backg
 % Dropdown Menu - Plot Group
 uicontrol('Parent',hp4_2,'Style','popup','Units','Normalized','Position',[0.01 0 .3 .1],'Tag','menu4_plotgroup','String','empty','Callback',@PlotGroup_Callback);
 
+% "Export CSV" - Button
+uicontrol('Units','Normalized','parent',hp4_2,'Position',[.5 .0 .2 .1],'String','Export csv','FontSize',9,'TooltipString','Export all group files into a csv file.','BackgroundColor',GUI_Color_Buttons,'Callback',@ExportCSV_ButtonCallback);
+
 % "Export Figure" - Button
 uicontrol('Units','Normalized','parent',hp4_2,'Position',[.7 .0 .2 .1],'String','Export Figure','FontSize',9,'TooltipString','Export figure in new window','BackgroundColor',GUI_Color_Buttons,'Callback',@Export4_ButtonCallback);
 
@@ -1658,6 +1661,42 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         else
             ha.XScale='linear';
         end
+    end
+
+% -------------------------------------------------------
+    function ExportCSV_ButtonCallback(hObj,~)
+        
+        disp('csv export started')
+        
+        % Load all files in listbox
+        h = findobj('Tag','listbox_group');
+        m=hObj.Value; % parameter index
+        for iii=1:size(h.String,1) % for all files
+            if ~iscell(h.String)
+                FILE(iii)=load(h.String);
+                [p,f,e]=fileparts(h.String);
+            else
+                FILE(iii)=load(h.String{iii});
+                [p,f,e]=fileparts(h.String{iii});
+            end
+            Legend{iii}=[f ' (n=' num2str(size(FILE(iii).GROUP,2)) ')']; % filename and number of chips as content in legend
+        end
+        
+        
+        % save as csv
+        for iii=1:size(FILE,2) % for all files
+            for f=1:size(FILE(iii).GROUP.FEATURES,2) % for all features
+                allMeanValues(:,f) = FILE(iii).GROUP.FEATURES(f).mean; % dim: x-values, features
+                allLabels{f} = FILE(iii).GROUP.FEATURES(f).YLabel;
+            end
+            
+            filename = ['Group_' num2str(iii) '.csv'];
+            writematrix(allMeanValues,filename)  
+        end
+        save('Group_Feature_Names.mat','allLabels')
+        
+        disp('csv export finished')
+        
     end
 
 % -------------------------------------------------------
