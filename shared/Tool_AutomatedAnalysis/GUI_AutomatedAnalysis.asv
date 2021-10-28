@@ -1674,11 +1674,11 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         for iii=1:size(h.String,1) % for all files
             if ~iscell(h.String)
                 FILE(iii)=load(h.String);
-                Name(iii) = {h.String};
+                Name(iii) = h.String;
                 [p,f,e]=fileparts(h.String);
             else
                 FILE(iii)=load(h.String{iii});
-                Name(iii) = {h.String{iii}};
+                Namei(iii) = h.String;
                 [p,f,e]=fileparts(h.String{iii}); 
             end
             Legend{iii}=[f ' (n=' num2str(size(FILE(iii).GROUP,2)) ')']; % filename and number of chips as content in legend

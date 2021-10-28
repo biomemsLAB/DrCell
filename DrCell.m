@@ -241,6 +241,7 @@
 % 08.10.2021    - add function cardioDeleteSameTime.m and fix bug in zeroPadding.m (MC)
 % 26.10.2021    - remove function call cardioDeleteSameTime.m from Cardio analysis (MC)
 %               - Add button 'Export csv' to tab 4 of Automated Analysis Tool
+% 28.10.2021    - Extend 'Export csv' in tab 4 of Automated Analysis Tool to support more than one file
 
 function DrCell() 
 
@@ -248,7 +249,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20211008';
+DrCellVersion = '20211028';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
