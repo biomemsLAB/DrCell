@@ -1693,9 +1693,9 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 allLabels{f} = FILE(idx_file).GROUP(idx_chip).FEATURES(f).YLabel;
             end
             
-            [p,f,e]=fileparts(Name(idx_file));
+            [p,f,e]=fileparts(Name{idx_file});
             filename = [p filesep f '_Chip_' num2str(idx_chip) '_of_' num2str(size(FILE(idx_file).GROUP,2)) '.csv'];
-            T = array2table(allMeanValues, "VariableNames", allLabels);
+            T = array2table(allMeanValues, 'VariableNames', allLabels);
             writetable(T,filename)
             end
         end
