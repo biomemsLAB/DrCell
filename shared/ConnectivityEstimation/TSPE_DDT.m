@@ -1,3 +1,8 @@
+% According to Boschi, Alessio, Martina Brofiga und Paolo Massobrio (2021) 
+% Thresholding Func-tional Connectivity Matrices to Recover the Topological Properties of Large-Scale Neuronal Networks
+% In: Frontiers in Neuroscience 15 
+% doi: 10 . 3389 /fnins.2021.705103
+
 function [FM]=TSPE_DDT(CM, n)
 
 if nargin == 1
