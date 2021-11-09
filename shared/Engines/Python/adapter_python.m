@@ -1,4 +1,4 @@
-function [back]=adapter(TS, AMP, rec_dur, SaRa ,Selection, time_win, FR_min, N, binSize)
+function [back]=adapter(drcell_path, TS, AMP, rec_dur, SaRa ,Selection, time_win, FR_min, N, binSize)
 
 
         % remove old DrCell/Neuro/Cardio folder from search path
@@ -11,7 +11,8 @@ function [back]=adapter(TS, AMP, rec_dur, SaRa ,Selection, time_win, FR_min, N, 
         end
 
         % Add all DrCell folder to matlab search path
-        path_full = mfilename('fullpath'); % get path of this m-file (.../path/DrCell.m)
+        % path_full = mfilename('fullpath'); % get path of this m-file (.../path/DrCell.m)
+        path_full = drcell_path % path of the main-folder (.../path/DrCell.m)
 
         disp(['Voller Path' path_full])
         [path_drcell,~] = fileparts(path_full); % separate path and m-file-name
