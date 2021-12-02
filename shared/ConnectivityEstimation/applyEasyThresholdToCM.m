@@ -15,7 +15,7 @@ function [CM_nu,CM_exh,CM_inh]=applyEasyThresholdToCM(CM,factor)
 
     CM_nu = zeros(size(CM));
     
-    [CM_exh,CM_inh]=seperateConnectivityMatrixToInhExh(CM);
+    [CM_exh,CM_inh]=seperateConnectivityMatrixToInhExc(CM);
 
     mask1=false(size(CM_exh));
     mask1(CM_exh>(mean(nonzeros(CM_exh))+factor*std(nonzeros(CM_exh))))=1;
