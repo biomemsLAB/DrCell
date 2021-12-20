@@ -82,15 +82,15 @@ if auto
                 end
                 calc_beg = calc_beg + Size_noisewindow*SaRa;
                 calc_end = calc_end + Size_noisewindow*SaRa;
-                window_beg = window_beg + Size_noisewindow*SaRa;
-                window_end = window_end + Size_noisewindow*SaRa;
+                window_beg = window_beg + int32(Size_noisewindow*SaRa);
+                window_end = window_end + int32(Size_noisewindow*SaRa);
                 
                 if window_end>size(T,2) break; end %#ok
                 ELEC_CHECK(n) = 1;
                 nr_win = nr_win + 1;
             else
-                window_beg = window_beg + Size_noisewindow/2*SaRa;
-                window_end = window_end + Size_noisewindow/2*SaRa;
+                window_beg = window_beg + int32(Size_noisewindow/2*SaRa);
+                window_end = window_end + int32(Size_noisewindow/2*SaRa);
                 
                 if window_end>size(T,2) break; end %#ok
                 if ((window_beg > 0.5*size(T,2)) && (nr_win == 0))
@@ -101,8 +101,8 @@ if auto
         end
         
         nr_win = 0;
-        window_beg = 0.01*SaRa+1;
-        window_end = (0.01+Size_noisewindow)*SaRa;
+        window_beg = int32(0.01*SaRa+1);
+        window_end = int32((0.01+Size_noisewindow)*SaRa);
         calc_beg = 1;
         calc_end = Size_noisewindow*SaRa;
         if HDrawdata ==1 || size(RAW.M,2)>60

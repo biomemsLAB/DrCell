@@ -63,8 +63,8 @@ uicontrol('style','listbox','parent',hp1_1,'Units','Normalized','position',[.25 
 uicontrol('style','text','parent',hp1_1,'Units','Normalized','position',[.6 .725 .3 .1],'string','Threshold data:','BackgroundColor',GUI_Color_BG)
 uicontrol('style','listbox','parent',hp1_1,'Units','Normalized','position',[.6 .1 .3 .6],'tag','listbox_th','BackgroundColor',GUI_Color_BG)
 
-% "Select Files" - Button
-uicontrol('parent',hp1_1,'Units','Normalized','Position',[.01 .85 .2 .1],'String','Select Files','FontSize',9,'TooltipString','Select files (or directory if checkbox is checked) containing raw and threshold data','BackgroundColor',GUI_Color_Buttons,'Callback',@Select1_ButtonCallback);
+% "Load Files" - Button
+uicontrol('parent',hp1_1,'Units','Normalized','Position',[.01 .85 .2 .1],'String','Load Files','FontSize',9,'TooltipString','Load files (or directory if checkbox is checked) containing raw and threshold data into the list.','BackgroundColor',GUI_Color_Buttons,'Callback',@Select1_ButtonCallback);
 uicontrol('style','checkbox','parent',hp1_1,'Units','Normalized','Position',[.01 .75 .3 .1], 'string','Select folder and subfolders','Tag','Box_subfolder','BackgroundColor',GUI_Color_BG)
 
 % Remove1
@@ -76,7 +76,7 @@ uicontrol('style','edit','parent',hp1_1,'Units','Normalized','Position',[.6 .85 
 
 
 % Panel1_2 - Feature:
-hp1_2 = uipanel('Parent',tab1,'Title','Feature','Position',[.05 .05 .95 .5],'BackgroundColor',GUI_Color_BG);
+hp1_2 = uipanel('Parent',tab1,'Title','Options','Position',[.05 .05 .95 .5],'BackgroundColor',GUI_Color_BG);
 % Feature:
 uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .8 .3 .1], 'string','Six-well MEA mode','Tag','Box_sixwell','BackgroundColor',GUI_Color_BG)
 uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .7 .3 .1], 'string','Detect negative spikes','Tag','Box_negSpikes','value',1,'BackgroundColor',GUI_Color_BG)
@@ -110,8 +110,8 @@ hp2_1 = uipanel('Parent',tab2,'Title','TimeStamp-Data selection','Position',[.05
 % Listbox
 uicontrol('style','listbox','parent',hp2_1,'Units','Normalized','position',[.01 .1 .3 .7],'tag','listbox_ts','BackgroundColor',GUI_Color_BG)
 
-% "Select Files" - Button
-uicontrol('Units','Normalized','parent',hp2_1,'Position',[.01 .85 .2 .1],'String','Select TS-Files','FontSize',9,'TooltipString','Select TimeStamp-Files (_TS)','BackgroundColor',GUI_Color_Buttons,'Callback',@Select2_ButtonCallback);
+% "Load TS-Files" - Button
+uicontrol('Units','Normalized','parent',hp2_1,'Position',[.01 .85 .2 .1],'String','Load TS-Files','FontSize',9,'TooltipString','Select TimeStamp-Files (_TS)','BackgroundColor',GUI_Color_Buttons,'Callback',@Select2_ButtonCallback);
 
 % Remove2
 uicontrol('Units','Normalized','parent',hp2_1,'Position',[.22 .85 .2 .1],'String','Remove Selected','FontSize',9,'TooltipString','Rmove selected files from list','BackgroundColor',GUI_Color_Buttons,'Callback',@Remove2_ButtonCallback);
@@ -172,8 +172,8 @@ hp3_1 = uipanel('Parent',tab3,'Title','Feature-Data selection','Position',[.05 .
 % Listbox
 uicontrol('style','listbox','parent',hp3_1,'Units','Normalized','position',[.01 .1 .3 .7],'tag','listbox_features','BackgroundColor',GUI_Color_BG)
 
-% "Select Files" - Button
-uicontrol('Units','Normalized','parent',hp3_1,'Position',[.01 .85 .2 .1],'String','Select Feature-Files','FontSize',9,'TooltipString','Select Feature-Files','BackgroundColor',GUI_Color_Buttons,'Callback',@Select3_ButtonCallback);
+% "Load Files" - Button
+uicontrol('Units','Normalized','parent',hp3_1,'Position',[.01 .85 .2 .1],'String','Load Feature-Files','FontSize',9,'TooltipString','Select Feature-Files','BackgroundColor',GUI_Color_Buttons,'Callback',@Select3_ButtonCallback);
 
 % Remove3
 uicontrol('Units','Normalized','parent',hp3_1,'Position',[.22 .85 .2 .1],'String','Remove Selected','FontSize',9,'TooltipString','Rmove selected files from list','BackgroundColor',GUI_Color_Buttons,'Callback',@Remove3_ButtonCallback);
@@ -212,8 +212,8 @@ hp4_1 = uipanel('Parent',tab4,'Title','Group-Data selection','Position',[.05 .55
 % Listbox
 uicontrol('style','listbox','parent',hp4_1,'Units','Normalized','position',[.01 .1 .3 .7],'tag','listbox_group','BackgroundColor',GUI_Color_BG)
 
-% "Select Files" - Button
-uicontrol('Units','Normalized','parent',hp4_1,'Position',[.01 .85 .2 .1],'String','Select Group-Files','FontSize',9,'TooltipString','Select Group-Files','BackgroundColor',GUI_Color_Buttons,'Callback',@Select4_ButtonCallback);
+% "Load Files" - Button
+uicontrol('Units','Normalized','parent',hp4_1,'Position',[.01 .85 .2 .1],'String','Load Group-Files','FontSize',9,'TooltipString','Select Group-Files','BackgroundColor',GUI_Color_Buttons,'Callback',@Select4_ButtonCallback);
 
 % Remove4
 uicontrol('Units','Normalized','parent',hp4_1,'Position',[.22 .85 .2 .1],'String','Remove Selected','FontSize',9,'TooltipString','Rmove selected files from list','BackgroundColor',GUI_Color_Buttons,'Callback',@Remove4_ButtonCallback);
@@ -355,14 +355,14 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         
     end
 
-    function clearThresholdFactorField() 
+    function clearThresholdFactorField()
         h = findobj(hmain,'Tag','Cell_thresholdFactor');
         h.String = 'TH data loaded';
     end
 
     function setExampleRootPath(exampleRootPath)
-       h = findobj('Tag','Cell1_RootPath');
-       h.String = exampleRootPath;
+        h = findobj('Tag','Cell1_RootPath');
+        h.String = exampleRootPath;
     end
 
 % -------------------------------------------------------
@@ -410,11 +410,11 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         % Start logging the command window text
         cd(PREF.root_path)
         
-        diary logFile_AutoSpikedetection 
+        diary logFile_AutoSpikedetection
         diary on
         
         % 'Open directory' Window
-        mainpath=uigetdir(PREF.root_path, 'Select a location where you want to save the folder containing the spike trains and pictures'); 
+        mainpath=uigetdir(PREF.root_path, 'Select a location where you want to save the folder containing the spike trains and pictures');
         if mainpath == 0
             return
         end
@@ -432,12 +432,12 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             SPIKEZ=spikedetection_DrCell(SPIKEZ,fullpath_raw,fullpath_th, PREF);
         end
         
-        if flag_spikedetection == 1 
+        if flag_spikedetection == 1
             disp('1: Spikedetection SWTEO')
             SPIKEZ=spikedetection_SWTEO(SPIKEZ,fullpath_raw,fullpath_th, PREF);
         end
         
-        if flag_spikedetection == 2 
+        if flag_spikedetection == 2
             disp('2: Spikedetection Cardio')
             SPIKEZ=spikedetection_Cardio(SPIKEZ,fullpath_raw,fullpath_th, PREF);
         end
@@ -448,7 +448,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         end
         
         
-
+        
         
         disp('Spikedetection finished')
         
@@ -469,6 +469,14 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             
             disp(['Path of raw file loaded: ' p_raw filesep f_raw e_raw])
             
+            % path of original data: root/data/subfolder/files
+            % new path for saving data: root/newFolder/subfolder/newfiles
+            path_subfolder=erase(p_raw, root_path(1:end-1)); % p_raw - mainpath
+            newFolder_TS = 'TS';
+            newFolder_Pics = 'Pics_RAW_TS';
+            path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
+            path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
+            
             % load threshold file
             if ~isempty(fullpath_th)
                 flag_calculateThreshold=0;
@@ -484,80 +492,63 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             else % no threshold files loaded, so calculate threshold
                 flag_calculateThreshold=1;
             end
+            
+            % load data and calculate threshold
+            flag_waitbar=1;
+            file=[f_raw e_raw];
+            myPath=p_raw;
+            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
+            HDrawdata = strcmp(e_raw,'.brw');
+            [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
+            SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
+            
+            if flag_calculateThreshold
+                Multiplier_neg=thresholdFactor;
+                Multiplier_pos=thresholdFactor;
+                if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
+                Size_noisewindow=0.05; % 50 ms
+                HDrawdata = strcmp(e_raw,'.brw');
+                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+                % calc SNR
+                SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
+                SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
+                SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
+            end
+            
+            RAW=invertAndDeleteElectrodes(RAW, SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
+            
             % single well mode:
             if ~sixwell
-                % path of original data: root/data/subfolder/files
-                % new path for saving data: root/newFolder/subfolder/newfiles
-                path_subfolder=erase(p_raw, root_path(1:end-1)); % p_raw - mainpath
-                newFolder_TS = 'TS';
-                newFolder_Pics = 'Pics_RAW_TS';
-                path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
-                path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
                 
-                flag_waitbar=1;
-                file=[f_raw e_raw];
-                myPath=p_raw;
-                [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
-                HDrawdata = strcmp(e_raw,'.brw');
-                [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
-                SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
-                
-                if flag_calculateThreshold
-                    Multiplier_neg=thresholdFactor;
-                    Multiplier_pos=thresholdFactor;
-                    if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
-                    Size_noisewindow=0.05; % 50 ms
-                    HDrawdata = strcmp(e_raw,'.brw');
-                    [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
-                    % calc SNR
-                    SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
-                    SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
-                    SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
-                end
-                
-                RAW=invertAndDeleteElectrodes(RAW, SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
-                
+                % spikedetection
                 SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
                 SPIKEZ=spikedetection(RAW,SPIKEZ);
                 [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
                 SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
                 SPIKEZ=calc_snr(RAW,SPIKEZ);
-                %SaveSpikes(SPIKEZ,f_raw(1:length(f_raw)-4),
-                %path_savelocation_TS) % only use -4 to get rid of
-                %"_RAW", but data without _RAW are overwrited!!
                 SaveSpikes(SPIKEZ,f_raw,path_savelocation_TS)
-                if ~HDrawdata; savePlot(RAW,SPIKEZ,f_raw(1:length(f_raw)-4), path_savelocation_Pics); end
-                %disp(f_raw)
+                if ~HDrawdata; savePlot(RAW,SPIKEZ,f_raw, path_savelocation_Pics); end
             end
             % six well mode:
             if sixwell
-                RAW=LoadRawData([p_raw filesep f_raw e_raw],SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
-                [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge);
-                SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
-                for chamber=1:2 % 1:6
-                    % path of original data: root/data/subfolder/chip/files
-                    % new path for saving data: root/newFolder/subfolder/chip_ch/newfiles
-                    path_subfolder=strrep(p_raw, mainpath,''); % p_raw - mainpath
-                    path_subfolder=[path_subfolder '_ch' num2str(chamber)];
-                    newFolder_TS = 'TS';
-                    newFolder_Pics = 'Pics_RAW_TS';
-                    path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
-                    path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
+                for chamber=1:6
+                    path_savelocation_TS = [mainpath filesep newFolder_TS '_ch' num2str(chamber) path_subfolder filesep];
+                    path_savelocation_Pics = [mainpath filesep newFolder_Pics '_ch' num2str(chamber) path_subfolder filesep];
                     
-                    RAW=SixWell(RAW,chamber);
-                    SPIKEZ=spikedetection(RAW,SPIKEZ);
-                    %SPIKEZ.AMP=getSpikeAmplitudes(RAW.M,SPIKEZ.TS,SPIKEZ.PREF.SaRa); % for all current spikes
-                    % if SPIKEZ.neg.flag
-                    %     SPIKEZ.neg.AMP=getSpikeAmplitudes(RAW.M,SPIKEZ.neg.TS,SPIKEZ.PREF.SaRa);
-                    % end
-                    % if SPIKEZ.pos.flag
-                    %     SPIKEZ.pos.AMP=getSpikeAmplitudes(RAW.M,SPIKEZ.pos.TS,SPIKEZ.PREF.SaRa);
-                    % end
+                    % Select chamber
+                    RAW_ch=RAW;
+                    RAW_ch.M(:,:)=0;
+                    RAW_ch.M(:,getSixWellChamberIdx(chamber))=RAW.M(:,getSixWellChamberIdx(chamber));
+                    
+                    % spikedetection
+                    SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
+                    SPIKEZ=spikedetection(RAW_ch,SPIKEZ);
+                    
                     SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-                    SPIKEZ=calc_snr(RAW,SPIKEZ);
-                    SaveSpikes(SPIKEZ,[f_raw(1:length(f_raw)-4) '_ch' num2str(chamber)],path_savelocation_TS)
-                    savePlot(RAW,SPIKEZ,[f_raw(1:length(f_raw)-4) '_ch' num2str(chamber)],path_savelocation_Pics)
-                    disp([f_raw(1:length(f_raw)-4) '_ch' num2str(chamber)])
+                    SPIKEZ=calc_snr(RAW_ch,SPIKEZ);
+                    SaveSpikes(SPIKEZ,[f_raw '_ch' num2str(chamber)],path_savelocation_TS)
+                    savePlot(RAW_ch,SPIKEZ,[f_raw '_ch' num2str(chamber)],path_savelocation_Pics)
+                    disp([f_raw '_ch' num2str(chamber)])
                 end
             end
         end
@@ -572,86 +563,18 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         root_path = PREF.root_path;
         
         for iii=1:size(fullpath_raw,1)
-                
-                [p_raw,f_raw,e_raw]=fileparts(fullpath_raw{iii}); % path, filename, extension
-                
-                disp(['Path of raw file loaded: ' p_raw filesep f_raw e_raw])
-                
-                % path of original data: root/data/subfolder/files
-                % new path for saving data: root/newFolder/subfolder/newfiles
-                path_subfolder=erase(p_raw, root_path(1:end-1)); % p_raw - mainpath
-                newFolder_TS = 'TS_SWTEO';
-                newFolder_Pics = 'Pics_RAW_TS_SWTEO';
-                path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
-                path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
-                
-                % load threshold file
-                if ~isempty(fullpath_th)
-                    flag_calculateThreshold=0;
-                    for jjj=1:size(fullpath_th,1)
-                        [p_th,f_th,e_th]=fileparts(fullpath_th{jjj});
-                        if strcmp(p_raw,p_th) % if path of th file is same as path of raw files, load th file
-                            if strcmp(f_raw,f_th(1:end-3)) % if file name is the same, load th file
-                                disp(['Path of threshold file loaded: ' p_th filesep f_th e_th])
-                                SPIKEZ=LoadThreshold(SPIKEZ,[p_th filesep f_th e_th], thresholdFactor); % load thresholdfile
-                            end
-                        end
-                    end
-                else % no threshold files loaded, so calculate threshold
-                    flag_calculateThreshold=1;
-                end
-                cd(p_raw)
-                
-                % Load Raw data
-                flag_waitbar=1;
-                file=[f_raw e_raw];
-                myPath=p_raw;
-                [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
-                HDrawdata = strcmp(e_raw,'.brw');
-                [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
-                SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
-                SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
-                
-                if flag_calculateThreshold
-                    Multiplier_neg=thresholdFactor;
-                    Multiplier_pos=thresholdFactor;
-                    if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
-                    Size_noisewindow=0.05; % 50 ms
-                    HDrawdata = strcmp(e_raw,'.brw');
-                    [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
-                    % calc SNR
-                    SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
-                    SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
-                    SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
-                end
-                
-                RAW=invertAndDeleteElectrodes(RAW, SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
-                
-                % Spikedetection FL:
-                % new:
-                SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
-                [SPIKEZ]=combinedSpikeDetection(RAW,SPIKEZ); % spikedetection according to Lieb et al. (2017) ("SWTEO")
-                [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
-                SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-                SPIKEZ=calc_snr(RAW,SPIKEZ);
-                SaveSpikes(SPIKEZ,f_raw(1:length(f_raw)), path_savelocation_TS)
-                if ~HDrawdata; savePlot(RAW,SPIKEZ,f_raw(1:length(f_raw)), path_savelocation_Pics); end
-                disp(f_raw)
-            end
-    end
-
-    function SPIKEZ=spikedetection_Cardio(SPIKEZ,fullpath_raw,fullpath_th, PREF)
-        
-        f_edge = PREF.f_edge;
-        sixwell = PREF.sixwell;
-        subfolder = PREF.subfolder;
-        thresholdFactor = PREF.thresholdFactor;
-        root_path = PREF.root_path;
-        
-         for iii=1:size(fullpath_raw,1)
+            
             [p_raw,f_raw,e_raw]=fileparts(fullpath_raw{iii}); % path, filename, extension
             
             disp(['Path of raw file loaded: ' p_raw filesep f_raw e_raw])
+            
+            % path of original data: root/data/subfolder/files
+            % new path for saving data: root/newFolder/subfolder/newfiles
+            path_subfolder=erase(p_raw, root_path(1:end-1)); % p_raw - mainpath
+            newFolder_TS = 'TS_SWTEO';
+            newFolder_Pics = 'Pics_RAW_TS_SWTEO';
+            path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
+            path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
             
             % load threshold file
             if ~isempty(fullpath_th)
@@ -668,37 +591,129 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             else % no threshold files loaded, so calculate threshold
                 flag_calculateThreshold=1;
             end
+            cd(p_raw)
+            
+            % Load Raw data
+            flag_waitbar=1;
+            file=[f_raw e_raw];
+            myPath=p_raw;
+            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
+            HDrawdata = strcmp(e_raw,'.brw');
+            [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
+            SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
+            SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
+            
+            if flag_calculateThreshold
+                Multiplier_neg=thresholdFactor;
+                Multiplier_pos=thresholdFactor;
+                if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
+                Size_noisewindow=0.05; % 50 ms
+                HDrawdata = strcmp(e_raw,'.brw');
+                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+                % calc SNR
+                SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
+                SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
+                SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
+            end
+            
+            RAW=invertAndDeleteElectrodes(RAW, SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
+            
+            if ~sixwell
+                % Spikedetection SWTEO:
+                SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
+                [SPIKEZ]=combinedSpikeDetection(RAW,SPIKEZ); % spikedetection according to Lieb et al. (2017) ("SWTEO")
+                [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
+                SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
+                SPIKEZ=calc_snr(RAW,SPIKEZ);
+                SaveSpikes(SPIKEZ,f_raw, path_savelocation_TS)
+                if ~HDrawdata; savePlot(RAW,SPIKEZ,f_raw, path_savelocation_Pics); end
+                disp(f_raw)
+            end
+            
+            if sixwell
+                for chamber=1:6
+                    path_savelocation_TS = [mainpath filesep newFolder_TS '_ch' num2str(chamber) path_subfolder filesep];
+                    path_savelocation_Pics = [mainpath filesep newFolder_Pics '_ch' num2str(chamber) path_subfolder filesep];
+                    
+                    % Select chamber
+                    RAW_ch=RAW;
+                    RAW_ch.M(:,:)=0;
+                    RAW_ch.M(:,getSixWellChamberIdx(chamber))=RAW.M(:,getSixWellChamberIdx(chamber));
+                    
+                    % Spikedetection SWTEO:
+                    SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
+                    [SPIKEZ]=combinedSpikeDetection(RAW_ch,SPIKEZ); % spikedetection according to Lieb et al. (2017) ("SWTEO")
+                    [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW_ch,SPIKEZ);
+                    SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
+                    SPIKEZ=calc_snr(RAW_ch,SPIKEZ);
+                    SaveSpikes(SPIKEZ,[f_raw '_ch' num2str(chamber)], path_savelocation_TS)
+                    if ~HDrawdata; savePlot(RAW_ch,SPIKEZ,[f_raw '_ch' num2str(chamber)], path_savelocation_Pics); end
+                end
+            end
+        end
+    end
+
+    function SPIKEZ=spikedetection_Cardio(SPIKEZ,fullpath_raw,fullpath_th, PREF)
+        
+        f_edge = PREF.f_edge;
+        sixwell = PREF.sixwell;
+        subfolder = PREF.subfolder;
+        thresholdFactor = PREF.thresholdFactor;
+        root_path = PREF.root_path;
+        
+        for iii=1:size(fullpath_raw,1)
+            [p_raw,f_raw,e_raw]=fileparts(fullpath_raw{iii}); % path, filename, extension
+            
+            disp(['Path of raw file loaded: ' p_raw filesep f_raw e_raw])
+            
+            % path of original data: root/data/subfolder/files
+            % new path for saving data: root/newFolder/subfolder/newfiles
+            path_subfolder=erase(p_raw, root_path(1:end-1)); % p_raw - mainpath
+            newFolder_TS = 'TS';
+            newFolder_Pics = 'Pics_RAW_TS';
+            path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
+            path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
+            
+            % load threshold file
+            if ~isempty(fullpath_th)
+                flag_calculateThreshold=0;
+                for jjj=1:size(fullpath_th,1)
+                    [p_th,f_th,e_th]=fileparts(fullpath_th{jjj});
+                    if strcmp(p_raw,p_th) % if path of th file is same as path of raw files, load th file
+                        if strcmp(f_raw,f_th(1:end-3)) % if file name is the same, load th file
+                            disp(['Path of threshold file loaded: ' p_th filesep f_th e_th])
+                            SPIKEZ=LoadThreshold(SPIKEZ,[p_th filesep f_th e_th], thresholdFactor); % load thresholdfile
+                        end
+                    end
+                end
+            else % no threshold files loaded, so calculate threshold
+                flag_calculateThreshold=1;
+            end
+            
+            % read raw file and filter
+            flag_waitbar=1;
+            file=[f_raw e_raw];
+            myPath=p_raw;
+            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
+            HDrawdata = strcmp(e_raw,'.brw');
+            [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
+            SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
+            
+            if flag_calculateThreshold
+                Multiplier_neg=thresholdFactor;
+                Multiplier_pos=thresholdFactor;
+                if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
+                Size_noisewindow=0.05; % 50 ms
+                HDrawdata = strcmp(e_raw,'.brw');
+                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+                SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
+                SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
+            end
+            
+            RAW=invertAndDeleteElectrodes(RAW, SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
+            
             % single well mode:
             if ~sixwell
-                % path of original data: root/data/subfolder/files
-                % new path for saving data: root/newFolder/subfolder/newfiles
-                path_subfolder=erase(p_raw, root_path(1:end-1)); % p_raw - mainpath
-                newFolder_TS = 'TS';
-                newFolder_Pics = 'Pics_RAW_TS';
-                path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
-                path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
-                
-                flag_waitbar=1;
-                file=[f_raw e_raw];
-                myPath=p_raw;
-                [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
-                HDrawdata = strcmp(e_raw,'.brw');
-                [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
-                SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
-                
-                if flag_calculateThreshold
-                    Multiplier_neg=thresholdFactor;
-                    Multiplier_pos=thresholdFactor;
-                    if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
-                    Size_noisewindow=0.05; % 50 ms
-                    HDrawdata = strcmp(e_raw,'.brw');
-                    [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
-                    SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
-                    SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
-                end
-                
-                RAW=invertAndDeleteElectrodes(RAW, SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
-                
                 SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
                 
                 [SPIKEZ] = cardioSpikedetection(RAW,SPIKEZ);
@@ -708,49 +723,46 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             % six well mode:
             if sixwell
                 HDrawdata = 0; % this function only works with 60 electrode 6-Well chips
-                RAW=LoadRawData([p_raw filesep f_raw e_raw],SPIKEZ.PREF.CLEL, SPIKEZ.PREF.Invert_M);
-                [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge);
-                SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
-                for chamber=1:2 % 1:6
-                    % path of original data: root/data/subfolder/chip/files
-                    % new path for saving data: root/newFolder/subfolder/chip_ch/newfiles
-                    path_subfolder=strrep(p_raw, mainpath,''); % p_raw - mainpath
-                    path_subfolder=[path_subfolder '_ch' num2str(chamber)];
-                    newFolder_TS = 'TS';
-                    newFolder_Pics = 'Pics_RAW_TS';
-                    path_savelocation_TS = [mainpath filesep newFolder_TS path_subfolder filesep];
-                    path_savelocation_Pics = [mainpath filesep newFolder_Pics path_subfolder filesep];
+                
+                for chamber=1:6
+                    path_savelocation_TS = [mainpath filesep newFolder_TS '_ch' num2str(chamber) path_subfolder filesep];
+                    path_savelocation_Pics = [mainpath filesep newFolder_Pics '_ch' num2str(chamber) path_subfolder filesep];
                     
-                    RAW=SixWell(RAW,chamber);
+                    % Select chamber
+                    RAW_ch=RAW;
+                    RAW_ch.M(:,:)=0;
+                    RAW_ch.M(:,getSixWellChamberIdx(chamber))=RAW.M(:,getSixWellChamberIdx(chamber));
                     
-                    [SPIKEZ] = cardioSpikedetection(RAW,SPIKEZ);
-
-                    if SPIKEZ.S ==1; SaveSpikes(SPIKEZ,[f_raw(1:length(f_raw)-4) '_ch' num2str(chamber)],path_savelocation_TS); end % only save SPIKEZ if perfectly synchronous
-                    savePlot(RAW,SPIKEZ,[f_raw(1:length(f_raw)-4) '_ch' num2str(chamber)],path_savelocation_Pics)
-                    %disp([f_raw(1:length(f_raw)-4) '_ch' num2str(chamber)])
+                    % spikedetection
+                    SPIKEZ.PREF.flag_isHDMEAmode = HDrawdata;
+                    [SPIKEZ] = cardioSpikedetection(RAW_ch,SPIKEZ);
+                    
+                    if SPIKEZ.S ==1; SaveSpikes(SPIKEZ,[f_raw '_ch' num2str(chamber)],path_savelocation_TS); end % only save SPIKEZ if perfectly synchronous
+                    savePlot(RAW_ch,SPIKEZ,[f_raw '_ch' num2str(chamber)],path_savelocation_Pics)
+                    disp([f_raw '_ch' num2str(chamber)])
                 end
             end
-         end   
+        end
     end
 
     function spikedetection_OnlyPictures(fullpath_raw)
         for iii=1:size(fullpath_raw,1)
-                [p_raw,f_raw,e_raw]=fileparts(fullpath_raw{iii}); % path, filename, extension
-                
-                % path of original data: root/data/subfolder/files
-                % new path for saving data: root/newFolder/subfolder/newfiles
-                path_subfolder=strrep(p_raw, mainpath,''); % p_raw - mainpath
-                newFolder = 'Pics_RAW';
-                path_savelocation = [mainpath filesep newFolder path_subfolder filesep];
-                
-                RAW=LoadRawData([p_raw filesep f_raw e_raw], 0, 0); % path, Clear_EL, Invert_EL
-                SPIKEZ.neg.THRESHOLDS.Th=0; % init th, needed for SavePlot()
-                SPIKEZ.neg.TS=0;
-                
-                savePlotRaw(RAW,f_raw(1:length(f_raw)-4),path_savelocation)
-                disp(f_raw)
-                pack % performs memory garbage collection in order to consolidate workspace memory
-            end
+            [p_raw,f_raw,e_raw]=fileparts(fullpath_raw{iii}); % path, filename, extension
+            
+            % path of original data: root/data/subfolder/files
+            % new path for saving data: root/newFolder/subfolder/newfiles
+            path_subfolder=strrep(p_raw, mainpath,''); % p_raw - mainpath
+            newFolder = 'Pics_RAW';
+            path_savelocation = [mainpath filesep newFolder path_subfolder filesep];
+            
+            RAW=LoadRawData([p_raw filesep f_raw e_raw], 0, 0); % path, Clear_EL, Invert_EL
+            SPIKEZ.neg.THRESHOLDS.Th=0; % init th, needed for SavePlot()
+            SPIKEZ.neg.TS=0;
+            
+            savePlotRaw(RAW,f_raw(1:length(f_raw)-4),path_savelocation)
+            disp(f_raw)
+            pack % performs memory garbage collection in order to consolidate workspace memory
+        end
     end
 
 
@@ -764,7 +776,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         %subfolder = get(findobj(gcf,'Tag','Box_subfolder'),'value');
         subfolder=0;
         
-        if ~isempty(mainpath) 
+        if ~isempty(mainpath)
             if mainpath~=0
                 cd(mainpath)
             end
@@ -844,10 +856,10 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
 % -------------------------------------------------------
     function CalcNeuroFeatures_ButtonCallback(hObject,event)
         disp('Calculating Neuro Features')
-     
+        
         time_win = str2num(get(findobj(gcf,'Tag','Cell2_TimeWin'),'string'));
         FR_min = str2num(get(findobj(gcf,'Tag','Cell2_FR_min'),'string'));
-                
+        
         % get path and filename from listboxes:
         h_ts = findobj('Tag','listbox_ts');
         fullpath_ts=h_ts.String;
@@ -952,10 +964,10 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
 % -------------------------------------------------------
     function CalcCardioFeatures_ButtonCallback(hObject,event)
         disp('Calculating Cardio Features')
-     
+        
         time_win = str2num(get(findobj(gcf,'Tag','Cell2_TimeWin'),'string'));
         FR_min = str2num(get(findobj(gcf,'Tag','Cell2_FR_min'),'string'));
-                
+        
         % get path and filename from listboxes:
         h_ts = findobj('Tag','listbox_ts');
         fullpath_ts=h_ts.String;
@@ -979,7 +991,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 MERGED=MergeTS(SPIKEZ,MERGED,fullpath_ts{iii},flag_realClock);
             end
             clear SPIKEZ
-                        
+            
             if testWindowSizeChoice(time_win,MERGED.PREF.rec_dur)
                 % continue code
             else
@@ -1055,13 +1067,13 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
 
 % --------------------------------------------------------
     function [flag_isValid]=testWindowSizeChoice(winSize,rec_dur) % winSize has to be smaller or eual to rec_dur
-       if winSize> rec_dur
-           errordlg(['Time window size has to be smaller or equal to the entire recording duration of ' num2str(rec_dur) ' s.'])
-           flag_isValid = false;
-           return
-       else
-           flag_isValid = true;
-       end
+        if winSize> rec_dur
+            errordlg(['Time window size has to be smaller or equal to the entire recording duration of ' num2str(rec_dur) ' s.'])
+            flag_isValid = false;
+            return
+        else
+            flag_isValid = true;
+        end
     end
 
 % -------------------------------------------------------
@@ -1679,7 +1691,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             else
                 FILE(iii)=load(h.String{iii});
                 Name(iii) = {h.String{iii}};
-                [p,f,e]=fileparts(h.String{iii}); 
+                [p,f,e]=fileparts(h.String{iii});
             end
             Legend{iii}=[f ' (n=' num2str(size(FILE(iii).GROUP,2)) ')']; % filename and number of chips as content in legend
         end
@@ -1688,15 +1700,15 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         % save as csv
         for idx_file=1:size(FILE,2) % for all files
             for idx_chip=1:size(FILE(idx_file).GROUP,2)
-            for f=1:size(FILE(idx_file).GROUP(idx_chip).FEATURES,2) % for all features
-                allMeanValues(:,f) = FILE(idx_file).GROUP(idx_chip).FEATURES(f).mean; % dim: x-values, features
-                allLabels{f} = FILE(idx_file).GROUP(idx_chip).FEATURES(f).YLabel;
-            end
-            
-            [p,f,e]=fileparts(Name{idx_file});
-            filename = [p filesep f '_Chip_' num2str(idx_chip) '_of_' num2str(size(FILE(idx_file).GROUP,2)) '.csv'];
-            T = array2table(allMeanValues, 'VariableNames', allLabels);
-            writetable(T,filename)
+                for f=1:size(FILE(idx_file).GROUP(idx_chip).FEATURES,2) % for all features
+                    allMeanValues(:,f) = FILE(idx_file).GROUP(idx_chip).FEATURES(f).mean; % dim: x-values, features
+                    allLabels{f} = FILE(idx_file).GROUP(idx_chip).FEATURES(f).YLabel;
+                end
+                
+                [p,f,e]=fileparts(Name{idx_file});
+                filename = [p filesep f '_Chip_' num2str(idx_chip) '_of_' num2str(size(FILE(idx_file).GROUP,2)) '.csv'];
+                T = array2table(allMeanValues, 'VariableNames', allLabels);
+                writetable(T,filename)
             end
         end
         
@@ -1788,14 +1800,14 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         end
         
     end
-    
+
 % --- Save Spikes Data -------------------------------------------
     function SaveSpikes(SPIKEZ,filename,dir_name)
         
-
+        
         filename=[filename '_TS.mat'];
         fullpath = [dir_name filename];
-
+        
         
         % --- DIRECTORY ----
         if ~exist(dir_name,'dir')
@@ -1804,97 +1816,30 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         % --- DIRECTORY ----
         
         saveSpikes(fullpath, SPIKEZ)
-
+        
     end
 
 % --- SixWell -------------------------------------------
-    function RAW=SixWell(RAW,chamber)
-        
-        if RAW.M_store==0
-            RAW.M_store=RAW.M; % copy original data
-        end
-        
-        RAW.M=RAW.M_store;
-        M_mask=zeros(size(RAW.M));
+    function idx=getSixWellChamberIdx(chamber)
         
         switch chamber
             case 0
                 
             case 1
-                
-                for n=15
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=23:26
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=31:34
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                RAW.M=M_mask;
-                
+                idx=[15,23:26,31:34];
             case 2
-                for n=40:42
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=47:50
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=55:56
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                RAW.M=M_mask;
-                
+                idx=[40:42,47:50,55:56];
             case 3
-                for n=43:44
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=51:54
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=58:60
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                RAW.M=M_mask;
-                
+                idx=[43:44,51:54,58:60];
             case 4
-                for n=27:30
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=35:38
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=46
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                RAW.M=M_mask;
-                
+                idx=[27:30,35:38,46];
             case 5
-                for n=5:6
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=11:14
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=19:21
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                RAW.M=M_mask;
-                
+                idx=[5:6,11:14,19:21];
             case 6
-                for n=1:3
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=7:10
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                for n=17:18
-                    M_mask(:,n)=RAW.M(:,n);
-                end
-                RAW.M=M_mask;
-                
+                idx=[1:3,7:10,17:18];
         end
     end
+
 
 % --- Save Pictures -------------------------------------------
     function savePlot(RAW,SPIKEZ,filename,dir_name)
@@ -2134,7 +2079,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         
         % delete rows that only contain zeros
         SPIKEZ.TS( ~any(SPIKEZ.TS,2), : ) = [];  %rows
-        SPIKEZ.AMP( ~any(SPIKEZ.AMP,2), : ) = [];  %rows 
+        SPIKEZ.AMP( ~any(SPIKEZ.AMP,2), : ) = [];  %rows
         SPIKEZ.neg.TS( ~any(SPIKEZ.neg.TS,2), : ) = [];  %rows
         SPIKEZ.neg.AMP( ~any(SPIKEZ.neg.AMP,2), : ) = [];  %rows
         SPIKEZ.pos.TS( ~any(SPIKEZ.pos.TS,2), : ) = [];  %rows
@@ -2238,7 +2183,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             FEATURES(k).std(isnan(FEATURES(k).std))=0;
         end
         
-
+        
         [MERGED.TS, MERGED.AMP]=deleteLowFiringRateSpiketrains(MERGED.TS,MERGED.AMP,MERGED.PREF.rec_dur,FR_min);
         MERGED=SpikeFeaturesCalculation(MERGED);
         
@@ -2253,7 +2198,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
     function [MERGED,FEATURES]=CalcCardioFeatures(MERGED,time_win,FR_min)
         
         %% Call function to calcuate all selected features like spikerate ect.
-
+        
         Selection={ ...
             'Cardio - Beat Rate', ...
             'ActiveElectrodes', ...

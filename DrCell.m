@@ -244,14 +244,14 @@
 % 28.10.2021    - Extend 'Export csv' in tab 4 of Automated Analysis Tool to support more than one file
 % 02.11.2021    - Fix compatiblity issues with Win vs. Linux (filesep do not works with cells) and older Matlab versions (double quotes are not supported) 
 % 02.12.2021    - Add applyThreshold_DDT.m and rename TSPE_DDT.m to DDT.m (MC)
-
+% 20.12.2021    - Fix error in GUI_AutomatedAnalysis.m when using SixWell-MEA mode (MC)
 function DrCell() 
 
 close all;
 clear all;
 clc
 
-DrCellVersion = '20211202';
+DrCellVersion = '20211220';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
