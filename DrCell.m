@@ -245,6 +245,7 @@
 % 02.11.2021    - Fix compatiblity issues with Win vs. Linux (filesep do not works with cells) and older Matlab versions (double quotes are not supported) 
 % 02.12.2021    - Add applyThreshold_DDT.m and rename TSPE_DDT.m to DDT.m (MC)
 % 20.12.2021    - Fix error in GUI_AutomatedAnalysis.m when using SixWell-MEA mode (MC)
+% 21.12.2021    - Add SixWell-MEA mode for conduction velocity (airline) calculation (MC) 
 function DrCell() 
 
 close all;

@@ -386,24 +386,23 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
 
 % -------------------------------------------------------
     function StartSpikedetection_ButtonCallback(hObject,event)
-        
-        
-        
-        
+
         disp('Spikedetection started')
+        
+        % Init
         SPIKEZ=[];
         dirarray=[];
         files=[];
         filearray=[];
         
+        % Read options from GUI
         SPIKEZ.PREF.idleTime = str2num(get(findobj(gcf,'Tag','Cell_idleTime'),'string'))/1000; % save value in seconds
         PREF.f_edge = str2num(get(findobj(gcf,'Tag','Cell_fedge'),'string'));
         SPIKEZ.neg.flag = get(findobj(gcf,'Tag','Box_negSpikes'),'value');
         SPIKEZ.pos.flag = get(findobj(gcf,'Tag','Box_posSpikes'),'value');
-        PREF.sixwell = get(findobj(gcf,'Tag','Box_sixwell'),'value');
+        SPIKEZ.PREF.sixwell = get(findobj(gcf,'Tag','Box_sixwell'),'value');
         PREF.subfolder = get(findobj(gcf,'Tag','Box_subfolder'),'value');
         flag_spikedetection = str2num(get(findobj(gcf,'Tag','Cell_spikedetection'),'string')); % 0: DrCell, 1: FLieb, 2: Cardio, 3: only save pic of raw data
-        
         PREF.root_path=get(findobj(gcf,'Tag','Cell1_RootPath'),'string');
         PREF.thresholdFactor=str2num(get(findobj(gcf,'Tag','Cell_thresholdFactor'),'string'));
         
@@ -458,7 +457,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
 
     function SPIKEZ=spikedetection_DrCell(SPIKEZ,fullpath_raw,fullpath_th, PREF)
         f_edge = PREF.f_edge;
-        sixwell = PREF.sixwell;
+        sixwell = SPIKEZ.PREF.sixwell;
         subfolder = PREF.subfolder;
         thresholdFactor = PREF.thresholdFactor;
         root_path = PREF.root_path;
@@ -497,7 +496,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             flag_waitbar=1;
             file=[f_raw e_raw];
             myPath=p_raw;
-            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
+            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar,sixwell); % LOAD RAW DATA
             HDrawdata = strcmp(e_raw,'.brw');
             [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
             SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
@@ -557,7 +556,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
     function SPIKEZ=spikedetection_SWTEO(SPIKEZ,fullpath_raw,fullpath_th, PREF)
         
         f_edge = PREF.f_edge;
-        sixwell = PREF.sixwell;
+        sixwell = SPIKEZ.PREF.sixwell;
         subfolder = PREF.subfolder;
         thresholdFactor = PREF.thresholdFactor;
         root_path = PREF.root_path;
@@ -597,7 +596,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             flag_waitbar=1;
             file=[f_raw e_raw];
             myPath=p_raw;
-            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
+            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar,sixwell); % LOAD RAW DATA
             HDrawdata = strcmp(e_raw,'.brw');
             [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
             SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
@@ -656,7 +655,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
     function SPIKEZ=spikedetection_Cardio(SPIKEZ,fullpath_raw,fullpath_th, PREF)
         
         f_edge = PREF.f_edge;
-        sixwell = PREF.sixwell;
+        sixwell = SPIKEZ.PREF.sixwell;
         subfolder = PREF.subfolder;
         thresholdFactor = PREF.thresholdFactor;
         root_path = PREF.root_path;
@@ -694,7 +693,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             flag_waitbar=1;
             file=[f_raw e_raw];
             myPath=p_raw;
-            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar); % LOAD RAW DATA
+            [RAW,~]=readFileFunctionCaller(file,myPath,flag_waitbar,sixwell); % LOAD RAW DATA
             HDrawdata = strcmp(e_raw,'.brw');
             [RAW, SPIKEZ.FILTER.Name, SPIKEZ.FILTER.f_edge]=ApplyFilter(RAW,f_edge,HDrawdata,flag_waitbar);
             SPIKEZ=initSPIKEZ(SPIKEZ,RAW);
