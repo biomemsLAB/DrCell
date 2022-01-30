@@ -1,4 +1,4 @@
-function [CM_exh,CM_inh]=seperateConnectivityMatrixToInhExh(CM)
+function [CM_exh,CM_inh]=seperateConnectivityMatrixToInhExc(CM)
 CM_exh = CM;
 CM_exh(CM<0)=0; % delete inhibitory connections leaving only exhibitory ones
 
