@@ -65,7 +65,7 @@ SPIKEZ.AMP
 
 %% Calculate spike train features
 FRmin=6; % Min firing rate is set to 6 spikes per minute. If a spike train has less spikes per minute, it will be skipped.
-time_win= SPIKEZ.PREF.rec_dur; % here time_window is same as recording time. Smaller time windows are also possible, e.g. time_win = rec_dur/2 will split the spike train into two windows.
+time_win= SPIKEZ.PREF.rec_dur/2; % here time_window is same as recording time. Smaller time windows are also possible, e.g. time_win = rec_dur/2 will split the spike train into two windows.
 
 all_features ={ ...
 'Spikerate',...
