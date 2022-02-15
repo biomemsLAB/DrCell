@@ -25,7 +25,7 @@ global HDspikedata HDrawdata HDmode el_no bottomPanel_HD
 global myPath full_path M path_Neuro RAW
 global Date Time
 % Connectivity
-global CM CM_inh CM_exh 
+global CM CM_inh CM_exh
 % GUI Color
 global GUI_Color_BG GUI_Color_Buttons GUI_Color_BigButton % Vectors containing R G B
 
@@ -714,8 +714,13 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
 % --- Redraw 1 graphs-view whit HDMEA(.brw)Data(Sh.Kh)-------------------
     function HDredraw(~,~)
         
-        set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
-                'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur])     
+        if rec_dur > 1
+            set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
+                'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur])
+        else
+            set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
+                'Min', 0, 'Max', rec_dur,'Value', 1, 'SliderStep',[0.1 0.1])
+        end
         
         % update file info if Panels were already loaded
         if ~isempty(bottomPanel_HD) % if handle exist
@@ -2393,7 +2398,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             errordlg('Unknown Fileformat')
         end
         
- 
+        
     end
 
 % --- Init Variables before open a file (MC)
@@ -2874,62 +2879,62 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         setSettingsAfterOpenFile()
         
-%         % Settings:
-%         set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
-%         set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
-%         set(findobj(gcf,'Parent',t2,'Enable','on'),'Enable','off');
-%         set(findobj(gcf,'Parent',t5),'Enable','on');
-%         set(findobj(gcf,'Parent',t6),'Enable','on');
-%         set(findobj(gcf,'Parent',t7),'Enable','on');
-%         set(findobj(gcf,'Tag','Spike_Box'),'value',0,'Enable','off');
-%         set(findobj(gcf,'Tag','Spike2_Box'),'value',0,'Enable','off');
-%         set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
-%         set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_scaleBox'),'value',2,'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_DefaultBox'),'Enable','on');
-%         set(findobj(gcf,'Parent',radiogroup2),'Enable','off');
-%         set(findobj(gcf,'Parent',radiogroup3),'Enable','off');
-%         set(findobj(gcf,'Tag','Manual_threshold'),'Enable','off')
-%         set(findobj(gcf,'Tag','time_start'),'Enable','off');
-%         set(findobj(gcf,'Tag','time_end'),'Enable','off');
-%         set(findobj(gcf,'Tag','CELL_sensitivityBox'),'Enable','off');
-%         set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'Enable','off');
-%         set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
-%         set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
-%         set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
-%         set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
-%         set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
-%         set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
-%         set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
-%         set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
-%         
-%         if nr_channel>1
-%             set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-%         end
-%         
-%         % Electrode Selection
-%         delete(findobj('Tag','S_Elektrodenauswahl'));
-%         uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
-%         SubmitSorting(1:nr_channel) = zeros;
-%         
-%         preti = (0.5:1000/SaRa:2);
-%         postti = (0.5:1000/SaRa:2);
-%         
-%         delete(findobj('Tag','S_pretime'));
-%         delete(findobj('Tag','S_posttime'));
-%         uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-%         uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-%         
-%         
-%         HDredraw
-%         is_open = true;
-%         rawcheck = true;
+        %         % Settings:
+        %         set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
+        %         set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
+        %         set(findobj(gcf,'Parent',t2,'Enable','on'),'Enable','off');
+        %         set(findobj(gcf,'Parent',t5),'Enable','on');
+        %         set(findobj(gcf,'Parent',t6),'Enable','on');
+        %         set(findobj(gcf,'Parent',t7),'Enable','on');
+        %         set(findobj(gcf,'Tag','Spike_Box'),'value',0,'Enable','off');
+        %         set(findobj(gcf,'Tag','Spike2_Box'),'value',0,'Enable','off');
+        %         set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
+        %         set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_scaleBox'),'value',2,'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_DefaultBox'),'Enable','on');
+        %         set(findobj(gcf,'Parent',radiogroup2),'Enable','off');
+        %         set(findobj(gcf,'Parent',radiogroup3),'Enable','off');
+        %         set(findobj(gcf,'Tag','Manual_threshold'),'Enable','off')
+        %         set(findobj(gcf,'Tag','time_start'),'Enable','off');
+        %         set(findobj(gcf,'Tag','time_end'),'Enable','off');
+        %         set(findobj(gcf,'Tag','CELL_sensitivityBox'),'Enable','off');
+        %         set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'Enable','off');
+        %         set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
+        %         set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
+        %         set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
+        %         set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
+        %         set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
+        %         set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
+        %         set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
+        %         set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
+        %
+        %         if nr_channel>1
+        %             set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
+        %         end
+        %
+        %         % Electrode Selection
+        %         delete(findobj('Tag','S_Elektrodenauswahl'));
+        %         uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
+        %         SubmitSorting(1:nr_channel) = zeros;
+        %
+        %         preti = (0.5:1000/SaRa:2);
+        %         postti = (0.5:1000/SaRa:2);
+        %
+        %         delete(findobj('Tag','S_pretime'));
+        %         delete(findobj('Tag','S_posttime'));
+        %         uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
+        %         uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
+        %
+        %
+        %         HDredraw
+        %         is_open = true;
+        %         rawcheck = true;
     end
 
 % --- Open McRack-file (exported into ASCII) (CN)------------------
@@ -3084,7 +3089,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         [p,f,e]=fileparts(filepath);
         filename = [p filesep f];
-
+        
         saveRAW(RAW, filename)
     end
 
@@ -3093,12 +3098,12 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         disp('------ QUICK NEURO ANALYIS ---------')
         
-        % Filter 
+        % Filter
         if ~isAlreadyFiltered
-            Applyfilter(); 
+            Applyfilter();
         else
             disp('Raw data already filtered')
-        end 
+        end
         
         CalculateThreshold(); % same function call as pressing button "Calculate" (tab 3)
         Analysedecide(); % same function call as pressing button "Analyze..." (tab 4)
@@ -3111,12 +3116,12 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         disp('------ QUICK CARDIO ANALYIS ---------')
         
-        % Filter 
+        % Filter
         if ~isAlreadyFiltered
-            Applyfilter(); 
+            Applyfilter();
         else
             disp('Raw data already filtered')
-        end 
+        end
         
         spikedata = 0;
         CalculateThreshold(); % same function call as pressing button "Calculate" (tab 3)
@@ -3126,15 +3131,15 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         SPIKEZ.PREF.sixwell = sixwell;
         SPIKEZ.PREF.flag_isHDMEAmode = HDmode;
         SPIKEZ.PREF.idle_time = 0.2; % refractory time 200 ms
-        SPIKEZ = cardioSpikedetection(RAW,SPIKEZ);  
+        SPIKEZ = cardioSpikedetection(RAW,SPIKEZ);
         
         spikedata = true;
         set(findobj(gcf,'Parent',t5),'Enable','on');
         set(findobj(gcf,'Parent',t6),'Enable','on');
         set(findobj(gcf,'Parent',t7),'Enable','on');
         disp('Spikedetection finished')
-                
-
+        
+        
         
         
         % calculate signal speed
@@ -3156,7 +3161,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         %[SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=cardioCopySpikesIntoOldStructure(SPIKEZ);
         
         redrawdecide()
-       disp('------ QUICK CARDIO ANALYIS finished ---------')
+        disp('------ QUICK CARDIO ANALYIS finished ---------')
         
     end
 
@@ -4190,7 +4195,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         % PREF(15) = str2double(get(findobj(gcf,'Tag','STD_noisewindow'),'string'));              %get value for STD to find spike-free windows
         PREF(16) = str2double(get(findobj(gcf,'Tag','Size_noisewindow'),'string'))/1000;       %get windowsize to find spike-free windows
         PREF(17) = str2double(get(findobj(gcf,'Tag','CELL_sensitivityBox_pos'),'string'));       %get factor for positive threshold
-
+        
         Std_noisewindow=PREF(15);
         Size_noisewindow=PREF(16);
         Multiplier_neg=PREF(1);
@@ -5066,42 +5071,42 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % apply refractory time (aka "idle time") and get amplitude values
         [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
-
+        
         % calculate spike features like mean firing rate
         SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
         SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT); % calculate signal to noise ratio
         
-%         % apply Refractory time
-%         SPIKEZ.TS=idle_time(SPIKEZ.TS,SPIKEZ.PREF.idleTime);
-%         SPIKEZ.neg.TS=idle_time(SPIKEZ.neg.TS,SPIKEZ.PREF.idleTime);
-%         SPIKEZ.pos.TS=idle_time(SPIKEZ.pos.TS,SPIKEZ.PREF.idleTime);
-%         
-%         % delete all rows that only contain zeros:
-%         SPIKEZ.TS=SPIKEZ.TS(any(SPIKEZ.TS,2),:);
-%         SPIKEZ.neg.TS=SPIKEZ.neg.TS(any(SPIKEZ.neg.TS,2),:);
-%         SPIKEZ.pos.TS=SPIKEZ.pos.TS(any(SPIKEZ.pos.TS,2),:);
-%         
-%         % get amplitude for each spike
-%         [SPIKEZ.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
-%         [SPIKEZ.neg.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.neg.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
-%         [SPIKEZ.pos.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.pos.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
-%         
-%         % calculate spikeparameter like mean firing rate ect.
-%         SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-%         SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
+        %         % apply Refractory time
+        %         SPIKEZ.TS=idle_time(SPIKEZ.TS,SPIKEZ.PREF.idleTime);
+        %         SPIKEZ.neg.TS=idle_time(SPIKEZ.neg.TS,SPIKEZ.PREF.idleTime);
+        %         SPIKEZ.pos.TS=idle_time(SPIKEZ.pos.TS,SPIKEZ.PREF.idleTime);
+        %
+        %         % delete all rows that only contain zeros:
+        %         SPIKEZ.TS=SPIKEZ.TS(any(SPIKEZ.TS,2),:);
+        %         SPIKEZ.neg.TS=SPIKEZ.neg.TS(any(SPIKEZ.neg.TS,2),:);
+        %         SPIKEZ.pos.TS=SPIKEZ.pos.TS(any(SPIKEZ.pos.TS,2),:);
+        %
+        %         % get amplitude for each spike
+        %         [SPIKEZ.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
+        %         [SPIKEZ.neg.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.neg.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
+        %         [SPIKEZ.pos.AMP]=getSpikeAmplitudes(RAW,SPIKEZ.pos.TS,SaRa,SPIKEZ.PREF.flag_isHDMEAmode);
+        %
+        %         % calculate spikeparameter like mean firing rate ect.
+        %         SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
+        %         SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
         
         
         % old variables (just in case there are still used by old DrCell functions):
-%         SPIKES=SPIKEZ.TS;
-%         AMPLITUDES=SPIKEZ.AMP;
-%         NR_SPIKES=SPIKEZ.N;
-%         FR=SPIKEZ.FR;
-%         N_FR=SPIKEZ.aeN_FR; % number of active electrodes
-%         aeFRmean=SPIKEZ.aeFRmean;
-%         aeFRstd=SPIKEZ.aeFRstd;
-%         SNR=SPIKEZ.neg.SNR.SNR;
-%         SNR_dB = SPIKEZ.neg.SNR.SNR_dB;
-%         Mean_SNR_dB = SPIKEZ.neg.SNR.Mean_SNR_dB; 
+        %         SPIKES=SPIKEZ.TS;
+        %         AMPLITUDES=SPIKEZ.AMP;
+        %         NR_SPIKES=SPIKEZ.N;
+        %         FR=SPIKEZ.FR;
+        %         N_FR=SPIKEZ.aeN_FR; % number of active electrodes
+        %         aeFRmean=SPIKEZ.aeFRmean;
+        %         aeFRstd=SPIKEZ.aeFRstd;
+        %         SNR=SPIKEZ.neg.SNR.SNR;
+        %         SNR_dB = SPIKEZ.neg.SNR.SNR_dB;
+        %         Mean_SNR_dB = SPIKEZ.neg.SNR.Mean_SNR_dB;
         [SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=copySpikesIntoOldStructure(SPIKEZ);
         
         
@@ -5301,17 +5306,17 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % draw bursts
         if get(findobj(gcf,'Tag','checkbox_bursts'),'Value')==1
-%             R=nr_channel;
-%             for n=1:nr_channel
-%                 if ~isempty(nonzeros(BURSTS.BEG(:,n)))
-%                     Names(n)= EL_NAMES(n);
-%                 else
-%                     Names(n)= {['' ]};
-%                 end
-%             end
-%             set(gca,'YDir','reverse', 'ytick', [1.25:1:R+1], 'TickLength',[0 0], 'YTickLabel',Names','YLim',[0 R+1],'FontSize',6);
-%             xlabel('t /s')
-%             height=R+1;
+            %             R=nr_channel;
+            %             for n=1:nr_channel
+            %                 if ~isempty(nonzeros(BURSTS.BEG(:,n)))
+            %                     Names(n)= EL_NAMES(n);
+            %                 else
+            %                     Names(n)= {['' ]};
+            %                 end
+            %             end
+            %             set(gca,'YDir','reverse', 'ytick', [1.25:1:R+1], 'TickLength',[0 0], 'YTickLabel',Names','YLim',[0 R+1],'FontSize',6);
+            %             xlabel('t /s')
+            %             height=R+1;
             
             COLOR=[0 1 0.4]; % 0 0.8 0.4
             ROW=1;o=1.5;l=1;
@@ -5664,7 +5669,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         GLOB.file = file;
         GLOB.GUI_Color_BG = GUI_Color_BG;
- 
+        
         GUI_cardioSignalProcessing(RAW,SPIKEZ,GLOB)
     end
 
@@ -7071,7 +7076,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         h_p2=uipanel('Parent',h_main,'Position',[0.01 0.9 0.99 0.1],'BackgroundColor',GUI_Color_BG);
         uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_Th','String','Use surrogate threshold','units','Normalized','position', [.6 .5 .3 .3],'value',0,'TooltipString','Estimate connectivity using TSPE and delete connections that are not significant according to a surrogate data procedure.');
         uicontrol('Parent',h_p2,'style','checkbox','Tag','checkbox_CircularGraph','String','Circular graph','units','Normalized','position', [.2 .5 .3 .3],'value',0,'TooltipString','Instead of MEA-Layout use circular Graph.');
-
+        
         
         % Button
         uicontrol('Parent',h_p2,'Units','Normalized','Position',[.6 .1 0.3 0.3],'Tag','CELL_convertButton','String','Start','FontSize',9,'TooltipString','Start estimating connectivity','Callback',@EstimateConnectivityStartButtonCallback);
@@ -7081,7 +7086,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % dummy connectivity matrix to create graph
         plotElectrodesOnly(xx,yy)
- 
+        
     end
 
     function EstimateConnectivityStartButtonCallback(~,~)
@@ -7091,7 +7096,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         %[D, D_in, D_out]=getMeanNodeDegree(CM_reduced);
         
-        flag_isMeaLayout = not(get(findobj(gcf,'Tag','checkbox_CircularGraph'),'Value')); 
+        flag_isMeaLayout = not(get(findobj(gcf,'Tag','checkbox_CircularGraph'),'Value'));
         
         handle=gca;
         cla(handle) % clear axis
@@ -11488,7 +11493,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
     end
 
-    
+
 
 
 %Funktionen - Tab About
