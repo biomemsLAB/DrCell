@@ -12,7 +12,7 @@ if ~isempty(TS)
     TS(TS==0)=NaN;
 
     % 2) sorting
-    [TS, idx] = sort(TS);
+    [TS, idx] = sort(TS,1);
     for n=1:size(idx,2)
         AMP(:,n) = AMP(idx(:,n),n);
     end

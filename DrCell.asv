@@ -246,8 +246,6 @@
 % 02.12.2021    - Add applyThreshold_DDT.m and rename TSPE_DDT.m to DDT.m (MC)
 % 20.12.2021    - Fix error in GUI_AutomatedAnalysis.m when using SixWell-MEA mode (MC)
 % 21.12.2021    - Add SixWell-MEA mode for conduction velocity (airline) calculation (MC) 
-% 15.02.2021    - Fix error when analyzing cardio data with one active electrode
-%               - Support HDMEA files shorter than 1 second
 function DrCell() 
 
 close all;

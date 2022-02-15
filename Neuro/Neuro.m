@@ -715,7 +715,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
     function HDredraw(~,~)
         
         set(findobj(gcf,'Tag','MEA_slider'),'Enable','on',...
-            'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur])
+                'Min', 1, 'Max', rec_dur,'Value', 1, 'SliderStep',[1/rec_dur 1/rec_dur])     
         
         % update file info if Panels were already loaded
         if ~isempty(bottomPanel_HD) % if handle exist
@@ -3123,6 +3123,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % Detect spikes with 200 ms refractory time setting (hard coded in
         % cardioSpikedetection function)
+        SPIKEZ.PREF.sixwell = sixwell;
         SPIKEZ.PREF.flag_isHDMEAmode = HDmode;
         SPIKEZ.PREF.idle_time = 0.2; % refractory time 200 ms
         SPIKEZ = cardioSpikedetection(RAW,SPIKEZ);  

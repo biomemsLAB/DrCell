@@ -8,7 +8,7 @@ function [TS,AMP]=getSpikeAmplitudes(raw,TS,SaRa,flag_isHDMEAmode)
     end
 
     TS(TS==0)=NaN;
-    TS=sort(TS);
+    TS=sort(TS, 1);
     AMP=zeros(size(TS));
     AMP(AMP==0)=NaN;
     SP = int32(TS*SaRa); % converting spike-timestamp to sample-position, consider sample offset of one sample later!
