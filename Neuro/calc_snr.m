@@ -22,7 +22,7 @@ if ~isnan(SPIKEZ.neg.THRESHOLDS.Std_noisewindow) && ~isnan(SPIKEZ.neg.THRESHOLDS
         while nr_win < (2/PREF(16))             % use two secondes of the signal
             
             %calculate STD in windows
-            [~,sigma] = normfit(RAW.M(window_beg:window_end,int32(n))); %if you have the Statistics-Toolbox you can use "normfit" as well
+            sigma = std(m(window_beg:window_end,n));
             
             if((sigma < PREF(15)) && (sigma > 0))
                 CALC(calc_beg:calc_end,n) = RAW.M(window_beg:window_end,n);

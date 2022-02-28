@@ -248,13 +248,15 @@
 % 21.12.2021    - Add SixWell-MEA mode for conduction velocity (airline) calculation (MC) 
 % 15.02.2021    - Fix error when analyzing cardio data with one active electrode
 %               - Support HDMEA files shorter than 1 second
+% 28.02.2021    - Replace normfit with std in calc_snr.m
+
 function DrCell() 
 
 close all;
 clear all;
 clc
 
-DrCellVersion = '20220215';
+DrCellVersion = '20220228';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
