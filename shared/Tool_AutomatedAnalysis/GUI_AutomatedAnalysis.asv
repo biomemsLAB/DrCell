@@ -2206,8 +2206,8 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             'Cardio - Spike-contrast', ...
             };
         
-        flag_60HDMEA = get(findobj(gcf,'Tag','Box2_60HDMEA'),'value');
-        [WIN,MERGED]=CalcFeatures_function(MERGED,Selection,time_win,FR_min,60,[],flag_60HDMEA); % 60 , []: these two values are just place holder
+        flag_60HDMEA = get(findobj(gcf,'Tag','Box2_pos'),'value');
+        [WIN,MERGED]=CalcFeatures_function(MERGED,Selection,time_win,FR_min,60,[],flag_60HDMEA); % 60 , [] is just a dummy
         
         %% Pack WIN to FEATURES and calculate electrode wise (ew) parameter
         FEATURES=unpackWIN2FEATURES(WIN);

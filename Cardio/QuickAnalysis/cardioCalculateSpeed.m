@@ -1,7 +1,11 @@
-function [velocity_airline,velocity_min_mean,velocity_max_mean,velocity_mean_mean] = cardioCalculateSpeed(SPIKEZ,numSpikeColumns)
+function [velocity_airline,velocity_min_mean,velocity_max_mean,velocity_mean_mean] = cardioCalculateSpeed(SPIKEZ, numSpikeColumns, flag_60HDMEA)
 
 if nargin < 2
     numSpikeColumns = size(SPIKEZ.TS,1);
+end
+
+if nargin < 3
+    flag_60HDMEA = 0;
 end
 
 % init
@@ -27,7 +31,7 @@ if numSpikeColumns > 0 % velocity only can be calculated if there is any spike c
         % calculate velocity (airline): last spike - first spike
         [firstSpike, idx_el_first] = min(spikeColumn);
         [lastSpike, idx_el_last] = max(spikeColumn);
-        distance = getEuclidianDistanceBetweenElectrodes(idx_el_first,idx_el_last,EL_NAMES);
+        distance = getEuclidianDistanceBetweenElectrodes(idx_el_first,idx_el_last,EL_NAMES, flag_60HDMEA);
         delayTime = lastSpike - firstSpike;
         velocity_airline(i) = distance / delayTime;
         

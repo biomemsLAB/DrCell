@@ -1138,8 +1138,7 @@ for i=1:size(WIN,2) % loop trough all windows (=files)
     if any(strcmp('Cardio - Propagation Velocity',Selection))
         disp('Calculating: Propagation Velocity')
         
-        numSpikeColumns = size(WIN(i).SPIKEZ.TS,1);
-        [velocity_airline,velocity_min_mean,velocity_max_mean,velocity_mean_mean] = cardioCalculateSpeed(WIN(i).SPIKEZ, numSpikeColumns, flag_60HDMEA);
+        [velocity_airline,velocity_min_mean,velocity_max_mean,velocity_mean_mean] = cardioCalculateSpeed(WIN(i).SPIKEZ);
         
         k=k+1;
         WIN(i).parameter(k).name='Velocity (airline) in m/s'; 
