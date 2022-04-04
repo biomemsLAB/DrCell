@@ -106,7 +106,7 @@ if posSpike_Box==1
             THRESHOLDS_pos(:,n)=interp1(x,y,xq);
         end
     end
-    THRESHOLDS_pos(THRESHOLDS==10000)=NaN; % replace non-valid threshold values (by default: 10000) with NaN. Otherwise 1 spike will be detected on non-valid electrodes
+    THRESHOLDS_pos(THRESHOLDS_pos==10000)=NaN; % replace non-valid threshold values (by default: 10000) with NaN. Otherwise 1 spike will be detected on non-valid electrodes
 end
 
 

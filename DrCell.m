@@ -250,6 +250,7 @@
 %               - Support HDMEA files shorter than 1 second
 % 28.02.2022    - Replace normfit with std in calc_snr.m
 % 22.03.2022    - Add new MEA layout (60HDMEA) for cardio velocity (airline) calculation (tab 2 of Automated Analysis Tool) (MC)
+% 04.04.2022    - Fix error when detecting only positive spikes (MC)
 
 function DrCell() 
 
@@ -257,7 +258,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20220322';
+DrCellVersion = '20220404';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 

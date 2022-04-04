@@ -1877,13 +1877,23 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             y_axis = ones(length(SP),1).*scale;
             line ('Xdata',SP,'Ydata', y_axis + offset + y_delta/2,...
                 'LineStyle','none','Marker','.',...
-                'MarkerFaceColor','red','MarkerEdgeColor','red','MarkerSize',1);
+                'MarkerFaceColor','red','MarkerEdgeColor','red','MarkerSize',10);
             
             % Display Threshold
-            if size(SPIKEZ.neg.THRESHOLDS.Th,2)==size(SPIKEZ.neg.TS,2)
-                line ('Xdata',[0 RAW.T(length(RAW.T))],...
-                    'Ydata',[SPIKEZ.neg.THRESHOLDS.Th(n)+offset, SPIKEZ.neg.THRESHOLDS.Th(n)+offset],...
-                    'LineStyle','--','LineWidth',0.05,'Color','black');
+            if SPIKEZ.neg.flag
+                if size(SPIKEZ.neg.THRESHOLDS.Th,2)==size(SPIKEZ.neg.TS,2)
+                    line ('Xdata',[0 RAW.T(length(RAW.T))],...
+                        'Ydata',[SPIKEZ.neg.THRESHOLDS.Th(n)+offset, SPIKEZ.neg.THRESHOLDS.Th(n)+offset],...
+                        'LineStyle','--','LineWidth',0.05,'Color','black');
+                end
+            end
+            
+            if SPIKEZ.pos.flag
+                if size(SPIKEZ.pos.THRESHOLDS.Th,2)==size(SPIKEZ.pos.TS,2)
+                    line ('Xdata',[0 RAW.T(length(RAW.T))],...
+                        'Ydata',[SPIKEZ.pos.THRESHOLDS.Th(n)+offset, SPIKEZ.pos.THRESHOLDS.Th(n)+offset],...
+                        'LineStyle','--','LineWidth',0.05,'Color','black');
+                end
             end
         end
         
