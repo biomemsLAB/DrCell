@@ -629,50 +629,32 @@ uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 60 45 20],'T
     function quickCardioAnalysisButtonCallback(~,~)
         
         disp('------ QUICK CARDIO ANALYIS ---------')
-        HDrawdata = false;
         
-        %Applyfilter(); % same function call as pressing button "Apply..." (tab 2)
+        % Filter
+        if ~isAlreadyFiltered
+            Applyfilter();
+        else
+            disp('Raw data already filtered')
+        end
         
-        % Calculate Threshold
-        thresholddata = false;
-        factor=5;
-        [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=cardioThreshold(RAW, SPIKEZ, factor);
-        SPIKES = SPIKEZ.TS;
-        redrawdecide;
-        thresholddata = true;
-        set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Value',1,'Enable','on')
-        set(findobj(gcf,'Tag','CELL_ShowcurrentThresh'),'String','');
-        set(findobj(gcf,'Tag','Elsel_Thresh'),'String','');
+        spikedata = 0;
+        CalculateThreshold(); % same function call as pressing button "Calculate" (tab 3)
         
-        % Spikedetection
+        % Detect spikes with 200 ms refractory time setting (hard coded in
+        % cardioSpikedetection function)
         SPIKEZ.PREF.sixwell = 0;  % don't use sixwell MEA mode
         SPIKEZ.PREF.flag_isHDMEAmode = HDmode;
         SPIKEZ.PREF.idle_time = 0.2; % refractory time 200 ms
-        SPIKEZ = cardioSpikedetection(RAW, SPIKEZ);
+        SPIKEZ = cardioSpikedetection(RAW,SPIKEZ);
+        
         spikedata = true;
         set(findobj(gcf,'Parent',t5),'Enable','on');
         set(findobj(gcf,'Parent',t6),'Enable','on');
         set(findobj(gcf,'Parent',t7),'Enable','on');
         disp('Spikedetection finished')
         
-        % Delte low FR
-        %minFR=3;
-        %[SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES] = cardioDeleteLowFR(SPIKEZ, minFR);
-
-        % Delete non-median electrodes
-        %[SPIKEZ,numSpikes] = cardioDeleteNonMedianElectrodes(SPIKEZ);
         
-        % Delete non-synchronous electrodes
-        %synchrony_matrix=cardioPairwiseSynchrony(SPIKEZ, rec_dur);
-        %cardioDetectCluster(synchrony_matrix)
-        %[SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES] = cardioDeleteNonSynchronousElectrodes(SPIKEZ, synchrony_matrix);
         
-        % Check if spiketrain is clear (S=1)
-        %[S,PREF] = SpikeContrast(SPIKEZ.TS, rec_dur, 0.1);
-        %disp(['Spike-contrast:' num2str(S)])
-        %cardioShowNumberOfActiveElectrodes()
-        %redrawdecide()
         
         % calculate signal speed
         [velocity_airline,velocity_min_mean,velocity_max_mean] = cardioCalculateSpeed(SPIKEZ);
@@ -688,19 +670,12 @@ uicontrol('Parent',bottomPanel_HD,'Units','pixels','Position',[1105 60 45 20],'T
         for i = 1 : length(velocity_max_mean)
             disp(['Velocity_max (mean over neighboring electrodes) in m/s: ' num2str(velocity_max_mean(i))])
         end
-
         
-        % old parameter:
-        SPIKES=SPIKEZ.TS;
-        AMPLITUDES=SPIKEZ.AMP;
-        NR_SPIKES=SPIKEZ.N;
-        FR=SPIKEZ.FR;
-        N_FR=SPIKEZ.aeN_FR; % number of active electrodes
-        aeFRmean=SPIKEZ.aeFRmean;
-        aeFRstd=SPIKEZ.aeFRstd;
-        SNR=SPIKEZ.neg.SNR.SNR;
-        SNR_dB = SPIKEZ.neg.SNR.SNR_dB;
-        Mean_SNR_dB = SPIKEZ.neg.SNR.Mean_SNR_dB;
+        [SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=copySpikesIntoOldStructure(SPIKEZ);
+        %[SPIKEZ,SPIKES,AMPLITUDES,NR_SPIKES,FR,N_FR,aeFRmean,aeFRstd,SNR,SNR_dB,Mean_SNR_dB]=cardioCopySpikesIntoOldStructure(SPIKEZ);
+        
+        redrawdecide()
+        disp('------ QUICK CARDIO ANALYIS finished ---------')
     end
 
 function cardioShowNumberOfActiveElectrodes()
