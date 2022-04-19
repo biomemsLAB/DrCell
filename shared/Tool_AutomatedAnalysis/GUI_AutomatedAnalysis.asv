@@ -92,7 +92,7 @@ uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .4 
 uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .8 .25 .1],'String',{'Spikedetection' '(0: DrCell, 1: SWTEO, 2: Cardio, 3: Only save pictures)'},'BackgroundColor',GUI_Color_BG);
 uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .8 .1 .1], 'string','0','Tag','Cell_spikedetection','BackgroundColor',GUI_Color_BG)
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .7 .25 .1],'String',{'Threshold Factor' '(e.g. 5, Note: only enter value if no threshold data are used)'},'BackgroundColor',GUI_Color_BG);
+uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .7 .25 .1],'String',{'Threshold Factor'},'BackgroundColor',GUI_Color_BG);
 uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .7 .1 .1], 'string','5','Tag','Cell_thresholdFactor','BackgroundColor',GUI_Color_BG)
 
 % "Start Spikedetection"
