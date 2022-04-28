@@ -75,9 +75,9 @@ uicontrol('style','text','parent',hp1_1,'Units','Normalized','Position',[.5 .85 
 uicontrol('style','edit','parent',hp1_1,'Units','Normalized','Position',[.6 .85 .3 .07],'string','','Tag','Cell1_RootPath','BackgroundColor',GUI_Color_BG);
 
 
-% Panel1_2 - Feature:
+% Panel1_2 - Options:
 hp1_2 = uipanel('Parent',tab1,'Title','Options','Position',[.05 .05 .95 .5],'BackgroundColor',GUI_Color_BG);
-% Feature:
+% Options:
 uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .8 .3 .1], 'string','Six-well MEA mode','Tag','Box_sixwell','BackgroundColor',GUI_Color_BG)
 uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .7 .3 .1], 'string','Detect negative spikes','Tag','Box_negSpikes','value',1,'BackgroundColor',GUI_Color_BG)
 uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .6 .3 .1], 'string','Detect positive spikes','Tag','Box_posSpikes','BackgroundColor',GUI_Color_BG)
@@ -92,8 +92,12 @@ uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .4 
 uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .8 .25 .1],'String',{'Spikedetection' '(0: DrCell, 1: SWTEO, 2: Cardio, 3: Only save pictures)'},'BackgroundColor',GUI_Color_BG);
 uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .8 .1 .1], 'string','0','Tag','Cell_spikedetection','BackgroundColor',GUI_Color_BG)
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .7 .25 .1],'String',{'Threshold Factor' '(e.g. 5, Note: only enter value if no threshold data are used)'},'BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .7 .1 .1], 'string','5','Tag','Cell_thresholdFactor','BackgroundColor',GUI_Color_BG)
+uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .7 .25 .1],'String',{'Threshold Factor and Basefactor Noise'},'BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .7 .1/2 .1], 'string','5','Tag','Cell_thresholdFactor','BackgroundColor',GUI_Color_BG)
+
+%uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .6 .25 .1],'String',{'Threshold Base Noise Factor' '(e.g. 5, Note)'},'BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31+.1/2 .7 .1/2 .1], 'string','5','Tag','Cell_baseFactor','BackgroundColor',GUI_Color_BG)
+
 
 % "Start Spikedetection"
 uicontrol('Units','Normalized','parent',hp1_2,'Position',[.5 .1 .3 .2],'String','Start Spikedetection','FontSize',15,'fontweight', 'bold','TooltipString','Start spikedetection for all selected files','BackgroundColor',GUI_Color_BigButton,'Callback',@StartSpikedetection_ButtonCallback);
@@ -358,7 +362,9 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
 
     function clearThresholdFactorField()
         h = findobj(hmain,'Tag','Cell_thresholdFactor');
-        h.String = 'TH data loaded';
+        h.String = '-';
+        h = findobj(hmain,'Tag','Cell_baseFactor');
+        h.String = '-';
     end
 
     function setExampleRootPath(exampleRootPath)
@@ -406,6 +412,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         flag_spikedetection = str2num(get(findobj(gcf,'Tag','Cell_spikedetection'),'string')); % 0: DrCell, 1: FLieb, 2: Cardio, 3: only save pic of raw data
         PREF.root_path=get(findobj(gcf,'Tag','Cell1_RootPath'),'string');
         PREF.thresholdFactor=str2num(get(findobj(gcf,'Tag','Cell_thresholdFactor'),'string'));
+        PREF.baseFactor=str2num(get(findobj(gcf,'Tag','Cell_baseFactor'),'string'));
         
         % Start logging the command window text
         cd(PREF.root_path)
@@ -461,6 +468,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         sixwell = SPIKEZ.PREF.sixwell;
         subfolder = PREF.subfolder;
         thresholdFactor = PREF.thresholdFactor;
+        baseFactor = PREF.baseFactor;
         root_path = PREF.root_path;
         
         
@@ -505,7 +513,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             if flag_calculateThreshold
                 Multiplier_neg=thresholdFactor;
                 Multiplier_pos=thresholdFactor;
-                if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
+                if ~HDrawdata; Std_noisewindow=baseFactor; else; Std_noisewindow=9999; end
                 Size_noisewindow=0.05; % 50 ms
                 HDrawdata = strcmp(e_raw,'.brw');
                 [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
@@ -560,6 +568,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         sixwell = SPIKEZ.PREF.sixwell;
         subfolder = PREF.subfolder;
         thresholdFactor = PREF.thresholdFactor;
+        baseFactor = PREF.baseFactor;
         root_path = PREF.root_path;
         
         for iii=1:size(fullpath_raw,1)
@@ -606,7 +615,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             if flag_calculateThreshold
                 Multiplier_neg=thresholdFactor;
                 Multiplier_pos=thresholdFactor;
-                if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
+                if ~HDrawdata; Std_noisewindow=baseFactor; else; Std_noisewindow=9999; end
                 Size_noisewindow=0.05; % 50 ms
                 HDrawdata = strcmp(e_raw,'.brw');
                 [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
@@ -659,6 +668,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         sixwell = SPIKEZ.PREF.sixwell;
         subfolder = PREF.subfolder;
         thresholdFactor = PREF.thresholdFactor;
+        baseFactor = PREF.baseFactor;
         root_path = PREF.root_path;
         
         for iii=1:size(fullpath_raw,1)
@@ -702,7 +712,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             if flag_calculateThreshold
                 Multiplier_neg=thresholdFactor;
                 Multiplier_pos=thresholdFactor;
-                if ~HDrawdata; Std_noisewindow=5; else; Std_noisewindow=9999; end
+                if ~HDrawdata; Std_noisewindow=baseFactor; else; Std_noisewindow=9999; end
                 Size_noisewindow=0.05; % 50 ms
                 HDrawdata = strcmp(e_raw,'.brw');
                 [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);

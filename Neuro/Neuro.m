@@ -34,6 +34,8 @@ global SPIKES AMPLITUDES FR aeFRmean aeFRstd N_FR % FR=firing rate=spiking rate
 %global THRESHOLDS THRESHOLDS_pos  % MC positive threshold
 global SPIKEZ % SPIKEZ is a stucture
 
+ 
+
 % Burstdetection:
 global BURSTS % BURSTS is a structure (BURSTS.BEG -> timestamps of burst begin, BURTS.END -> end of bursts. see burstdetection.m for documentation)
 
@@ -61,6 +63,7 @@ M_OR            = 0;    % Copy of the data
 T               = 0;    % Timestamps
 EL_NAMES        = 0;    % Electrode names
 EL_NUMS         = 0;
+SPIKEZ.PREF.dyn_TH = 0;  % dynamic threshold is deactivated by default
 
 
 % --- set GUI Color -----
@@ -1268,6 +1271,11 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         ab = get(gca,'CurrentPoint');
         disp(get(gcbf, 'SelectionType'))
+        
+        if ~isfield(SPIKEZ, 'PREF')
+            disp('Click button "Calculate..." in order to activate manual setting of thresholds.')
+            return
+        end
         
         if strcmp((get(gcbf, 'SelectionType')),'normal') % left click
             if SPIKEZ.PREF.dyn_TH == 0
