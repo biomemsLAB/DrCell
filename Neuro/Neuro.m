@@ -7,6 +7,7 @@ function Neuro()
 
 disp ('--- Neuro ---');
 
+
 warning off all;
 
 global nr_channel nr_channel_old T M_OR SaRa NR_SPIKES EL_NAMES SPIKES3D SPIKES_OR waitbaradd waitbar_counter h_wait ACTIVITY END BEG EL_NUMS PREF rec_dur rec_dur_string
@@ -63,7 +64,6 @@ M_OR            = 0;    % Copy of the data
 T               = 0;    % Timestamps
 EL_NAMES        = 0;    % Electrode names
 EL_NUMS         = 0;
-SPIKEZ.PREF.dyn_TH = 0;  % dynamic threshold is deactivated by default
 
 
 % --- set GUI Color -----
@@ -2457,6 +2457,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         SPIKEZ          = [];
         SPIKEZ.TSC      = 0;
         SPIKEZ.TS       = 0;
+        %SPIKEZ.PREF.dyn_TH = 0;
         NCh             = 0;
         varT            = 0;
         varTdata        = 0;

@@ -253,6 +253,7 @@
 % 04.04.2022    - Fix error in positive spike detection (MC)
 % 19.04.2022    - Fix bug in quick cardio analysis (MC)
 % 29.04.2022    - Add textfield to GUI_AutomatedAnalysis to enter basenoise factor for threshold calculation (MC)
+% 19.05.2022    - Add support for old _TS.mat files ("sixwell-error") (MC)
 
 function DrCell() 
 
@@ -260,7 +261,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20220404';
+DrCellVersion = '20220519';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 

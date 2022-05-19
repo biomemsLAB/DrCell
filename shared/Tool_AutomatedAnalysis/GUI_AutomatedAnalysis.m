@@ -2022,7 +2022,12 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         % create field 'AMP', 'neg' and 'pos' if not exist
         if ~isfield(SPIKEZ,'AMP')
             SPIKEZ.AMP=zeros(size(SPIKEZ.TS)); % create dummy amps
+            SPIKEZ.AMP(SPIKEZ.TS~=0) = 1;
         end
+        if isempty(SPIKEZ.AMP)  % old SPIKEZ files exist, that contain a field AMP but which is empty
+           SPIKEZ.AMP=zeros(size(SPIKEZ.TS)); % create dummy amps
+           SPIKEZ.AMP(SPIKEZ.TS~=0) = 1;
+        end 
         if ~isfield(SPIKEZ,'neg')
             SPIKEZ.neg.TS=NaN;
             SPIKEZ.neg.AMP=NaN;
@@ -2038,6 +2043,9 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             SPIKEZ=rmfield(SPIKEZ,'pos'); % first remove 'pos' as it is probably no structure element
             SPIKEZ.pos.TS=NaN;
             SPIKEZ.pos.AMP=NaN;
+        end
+        if ~isfield(SPIKEZ.PREF, 'sixwell')  % if no field exist, assume that file is not a sixwell-MEA recording
+           SPIKEZ.PREF.sixwell = 0; 
         end
         
         

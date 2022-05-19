@@ -1,4 +1,4 @@
-% Load time stamp 3brain HDMEA Data (.brx)
+% Load _TS.mat or _RAW.mat file
 % Input:    file                filename
 %           flag_waitbar        optional input:
 %                               If set to 1: Window will open that shows user that file is being loaded.
@@ -68,7 +68,9 @@ if isfield(temp,'M') % if raw data
     fileinfo=temp.fileinfo;
     full_path=file;
 end
+
 if flag_waitbar; X=X+0.1; waitbar(X,H,'Please wait - reading data file...'); end
+
 %% Load SPIKEZ
 if isfield(temp,'SPIKEZ') % if spiketrain
     spiketraincheck=1;
@@ -128,6 +130,12 @@ if isfield(temp,'SPIKEZ') % if spiketrain
     end
     
     if flag_waitbar; X=X+0.1; waitbar(X,H,'Please wait - reading data file...'); end
+    
+    % if no amplitude data available, init AMP with ones
+    if isempty(SPIKEZ.AMP)
+       SPIKEZ.AMP = zeros(size(SPIKEZ.TS)); 
+       SPIKEZ.AMP(SPIKEZ.TS~=0) = 1;
+    end
     
     % ensure that all TS and AMP matrices have same size
     % TS:
