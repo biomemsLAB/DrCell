@@ -3,7 +3,7 @@ function [back]=adapter(drcell_path, TS, AMP, rec_dur, SaRa ,Selection, time_win
 
 % remove old DrCell/Neuro/Cardio folder from search path
 PathCell = textscan(path, '%s', 'Delimiter', pathsep);
-PathCell = PathCell{1,1}; % unpack cell (as textscan was used)
+PathCell = PathCell{1,1}; % unpack cell (as textscan was used);
 for i=1:size(PathCell,1)
     if any(strfind(PathCell{i},'DrCell')) % remove all entries that contain string "DrCell"
         rmpath(PathCell{i});
@@ -18,7 +18,7 @@ disp(['Voller Path' path_full])
 [path_drcell,~] = fileparts(path_full); % separate path and m-file-name
 
 p=genpath(path_drcell); % get path of all subfolders
-disp(p)
+% disp(p)
 addpath(p); % add to matlab search path
 
 if iscell(Selection)
@@ -32,7 +32,7 @@ MERGED.PREF.SaRa = SaRa;
 N = 0;
 binSize = 0;
 
-[WIN]=CalcFeatures_function(MERGED,Selection,time_win,FR_min,N,binSize);
+[WIN]=CalcFeatures_function(MERGED,Selection,time_win,FR_min);
 
 FEATURES=unpackWIN2FEATURES(WIN); % unpack structure WIN to FEATURES
 
