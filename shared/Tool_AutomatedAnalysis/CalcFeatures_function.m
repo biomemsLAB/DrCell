@@ -85,8 +85,8 @@ end
 
 if nargin < 7
     flag_60HDMEA = 0;
-    flag_norm = 0;
-    flat_waitbar = 0;
+    flag_norm = 1;
+    flat_waitbar = 1;
 end
 
 
