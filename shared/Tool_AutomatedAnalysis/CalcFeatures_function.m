@@ -854,7 +854,7 @@ for i=1:size(WIN,2) % loop trough all windows (=files)
     if any(strcmp('Connectivity_TSPE_mean_2std',Selection))
         disp('Calculating: Connectivity (TSPE) with threshold of mean+2*std')
         [TS_reduced, activeElIdx] = reduceTSsize(WIN(i).SPIKEZ.TS);
-        flag_waitbar=1;
+        % flag_waitbar=1;
         [C_w_d_sign,C_exh,C_inh]=TSPE_call(TS_reduced, WIN(i).SPIKEZ.PREF.rec_dur,flag_waitbar);
         nr_channel = size(WIN(i).SPIKEZ.TS,2);
         [C_w_d_sign,C_exh,C_inh] = rearrangeElectrodePosition(C_w_d_sign,C_exh,C_inh,activeElIdx,nr_channel);
@@ -992,7 +992,7 @@ for i=1:size(WIN,2) % loop trough all windows (=files)
     if any(strcmp('Connectivity_TSPE_withSurrogateThreshold',Selection))
         disp('Calculating: Connectivity (TSPE with surrogate threshold)')
         [TS_reduced, activeElIdx] = reduceTSsize(WIN(i).SPIKEZ.TS);
-        flag_waitbar=1;
+        % flag_waitbar=1;
         [C_w_d_sign,CM_exh,CM_inh]=TSPE_withSurrogateThreshold_call(TS_reduced, WIN(i).SPIKEZ.PREF.rec_dur,flag_waitbar);
         nr_channel = size(WIN(i).SPIKEZ.TS,2);
         [C_w_d_sign,CM_exh,CM_inh] = rearrangeElectrodePosition(C_w_d_sign,CM_exh,CM_inh,activeElIdx,nr_channel);
