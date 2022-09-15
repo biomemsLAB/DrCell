@@ -14,7 +14,7 @@ end
 % path_full = mfilename('fullpath'); % get path of this m-file (.../path/DrCell.m)
 path_full = drcell_path; % path of the main-folder (.../path/DrCell.m)
 
-disp(['Voller Path' path_full])
+% disp(['Voller Path' path_full])
 [path_drcell,~] = fileparts(path_full); % separate path and m-file-name
 
 p=genpath(path_drcell); % get path of all subfolders
