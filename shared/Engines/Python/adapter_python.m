@@ -1,4 +1,4 @@
-function [back]=adapter(drcell_path, TS, AMP, rec_dur, SaRa ,Selection, time_win, FR_min, N, binSize)
+function [back]=adapter(drcell_path, TS, AMP, rec_dur, SaRa ,Selection, time_win, FR_min, N, binSize, flag_norm, flat_waitbar)
 
 
 % remove old DrCell/Neuro/Cardio folder from search path
@@ -32,7 +32,7 @@ MERGED.PREF.SaRa = SaRa;
 N = 0;
 binSize = 0;
 
-[WIN]=CalcFeatures_function(MERGED,Selection,time_win,FR_min);
+[WIN]=CalcFeatures_function(MERGED,Selection,time_win,FR_min, [], [], 0, flag_norm, flat_waitbar);
 
 FEATURES=unpackWIN2FEATURES(WIN); % unpack structure WIN to FEATURES
 
