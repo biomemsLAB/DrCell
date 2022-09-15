@@ -75,20 +75,26 @@
 % 'Entropy_capurro'
 %     };
 
-function [WIN,MERGED]=CalcFeatures_function(MERGED,Selection,time_win,FR_min,N,binSize,flag_60HDMEA, flag_norm, flat_waitbar)
+function [WIN,MERGED]=CalcFeatures_function(MERGED,Selection,time_win,FR_min,N,binSize,flag_60HDMEA, flag_norm, flag_waitbar)
 
 if nargin == 4
     N = 60; % set number of electrodes to a fixed value (only needed for 'Sync_Contrast_fixed')
     binSize = [];
     flag_60HDMEA = 0;
     flag_norm = 1;
-    flat_waitbar = 1;
+    flag_waitbar = 1;
 end
 
 if nargin < 7
     flag_60HDMEA = 0;
     flag_norm = 1;
-    flat_waitbar = 1;
+    flag_waitbar = 1;
+end
+
+if nargin == 9
+    if binSize == 0
+        binSize = [];
+    end
 end
 
 
@@ -715,7 +721,7 @@ for i=1:size(WIN,2) % loop trough all windows (=files)
         disp('Calculating: Connectivity (TSPE)')
         [TS_reduced, activeElIdx] = reduceTSsize(WIN(i).SPIKEZ.TS);
         % flag_waitbar=1;
-        [C_w_d_sign,C_exh,C_inh]=TSPE_call(TS_reduced, WIN(i).SPIKEZ.PREF.rec_dur,flag_waitbar, flag_norm);
+        [C_w_d_sign,C_exh,C_inh]=TSPE_call(TS_reduced, WIN(i).SPIKEZ.PREF.rec_dur, flag_waitbar, flag_norm);
         nr_channel = size(WIN(i).SPIKEZ.TS,2);
         [C_w_d_sign,C_exh,C_inh] = rearrangeElectrodePosition(C_w_d_sign,C_exh,C_inh,activeElIdx,nr_channel);
         
