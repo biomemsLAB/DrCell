@@ -81,6 +81,8 @@ if nargin == 4
     N = 60; % set number of electrodes to a fixed value (only needed for 'Sync_Contrast_fixed')
     binSize = [];
     flag_60HDMEA = 0;
+    flag_norm = 1;
+    flat_waitbar = 1;
 end
 
 if nargin < 7
