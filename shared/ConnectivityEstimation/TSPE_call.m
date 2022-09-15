@@ -8,7 +8,7 @@ end
 
 % Estimate connecitivy:
 sdf=TS_M2sdf(TS,rec_dur); % convert format of time stamps like needed by TSPE
-% FLAG_NORM=0; % use normalization
+% FLAG_NORM=1; % use normalization
 [CM, DM] = TSPE(sdf, [], [], [], [], FLAG_NORM, flag_waitbar);
 %CM=TSPE_withSurrogateThreshold(sdf,[],[],[],[],[],[],[],[],flag_waitbar); % CMres: NxN matrix where N(i, j) is the total spiking probability edges (TSPE) i->j
 CM = CM - diag(diag(CM)); % set diagonal to zero (=deleting self loops)
