@@ -32,7 +32,7 @@ MERGED.PREF.SaRa = SaRa;
 N = 0;
 binSize = 0;
 
-[WIN]=CalcFeatures_function(MERGED,Selection,time_win,FR_min, [], [], 0, flag_norm, flat_waitbar);
+[WIN]=CalcFeatures_function(MERGED,Selection,time_win,FR_min, N, binSize, 0, flag_norm, flat_waitbar);
 
 FEATURES=unpackWIN2FEATURES(WIN); % unpack structure WIN to FEATURES
 
