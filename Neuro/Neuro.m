@@ -244,6 +244,10 @@ uicontrol('enable','on','Parent',t1,'Units','pixels','Position',[590 37 180 24],
 % "6-Well-MEA" - Button
 uicontrol('Parent',t1,'Units','pixels','Position',[590 66 180 24],'Tag','CELL_SixWellButton','String','6-Well-MEA','FontSize',9,'TooltipString','Consinder only one chamber of 6-Well-MEA.','Callback',@SixWellButtonCallback);
 
+% "Convert Axion-Files" - Button
+uicontrol('Parent',t1,'Units','pixels','Position',[392 37-29 180 24],'Tag','CELL_convertAxionButton','String','Convert Axion files','FontSize',9,'TooltipString','Convert one or more raw Axion 24-well files (converted to .csv) to DrCell compatible RAW.mat files. For each well a separate RAW.mat file is generated','Callback',@convertAxion24WellButtonCallback);
+
+
 % % "Import.brw-File" - Button
 % uicontrol('Parent',t1,'Units','pixels','Position',[590 37 180 24],'Tag','?','String','Import.brw-File(HD_Raw)','FontSize',9,'TooltipString','Load a .brw raw-file (HDMEA) .','Callback',@ImportbrwFileCallback);
 % % "Import.bxr-File" - Button
@@ -3522,6 +3526,58 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
     end
 
+
+% --- Convert .dat files to .mat (MC) ------------------------------------------
+    function convertAxion24WellButtonCallback(~,~) % convert Axion raw .csv data to _RAW.mat files for each well
+        
+        if ~isempty(myPath) && ischar(myPath)
+            cd(myPath)
+        end
+        
+        % "Open directory" Window
+        dir_name=uigetdir('Pick a Directory');
+        if dir_name == 0
+            return
+        end
+                
+        [dirarray,files]=subdir(dir_name);
+        if ~iscell(dirarray)
+            dirarray = {dir_name}; % force it to be a cell array of strings in case only one file is selected
+            tmp=dir(dir_name);
+            files{1}={tmp.name};
+        end
+        
+        myPath=dirarray{1};
+        
+        number_of_files=0;
+        for i=1:size(files,2)
+            number_of_files=number_of_files+size(files{i},2);
+        end
+        disp([num2str(number_of_files) ' files are inside selected folder'])
+        
+        for jjj=1:size(dirarray,2) % loop trough all subdirectories
+            current_dir=dirarray{jjj};
+            filearray=files{jjj};
+            
+            for iii=1:size(filearray,2) % Loop through all files
+                current_file = filearray{iii};
+                
+                [~,filename,ext] = fileparts(current_file); % get file extension
+                
+                if strcmp(ext,'.csv') 
+                    
+                    filepath = [current_dir filesep current_file];
+                    
+                    disp(['Converting ' filepath '...'])
+                    axion24well2RAW(filepath)
+                end
+                
+            end
+        end
+        
+        msgbox('Conversion finished');
+        
+    end
 
 
 %Funktionen - Tab Preprocessing

@@ -35,5 +35,5 @@ The GNU General Public License can be found at http://www.gnu.org/licenses/
 ## How to install
 
 Download the folder "DrCell" on your computer and execute "DrCell.m" (e.g. drag and drop "DrCell.m" into the MATLAB terminal). 
-This will add all DrCell subfolders into the MATLAB path environemnt which allows to use the DrCell functions from your own scripts. 
+This will open the GUI and add all DrCell subfolders into the MATLAB path environemnt which allows to use the DrCell functions from your own scripts. 
 

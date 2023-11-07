@@ -21,8 +21,6 @@
 %The GNU General Public License can be found at http://www.gnu.org/licenses/
 
 %% ------------- ToDo ------------------------------------------------------
-%               - Merging Neuro and Cardio version, so functions like data
-%               import are common (MC)
 %               - Cardio: Zoom-Button3, error if no spike detection has
 %               been conducted yet (MC)
 %               - Cardio, line 5305, error: index is not an integer (MC)
@@ -254,6 +252,9 @@
 % 19.04.2022    - Fix bug in quick cardio analysis (MC)
 % 29.04.2022    - Add textfield to GUI_AutomatedAnalysis to enter basenoise factor for threshold calculation (MC)
 % 19.05.2022    - Add support for old _TS.mat files ("sixwell-error") (MC)
+%
+% see Github for an up to date change log:
+% https://github.com/biomemsLAB/DrCell
 
 function DrCell() 
 
@@ -261,7 +262,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20220519';
+DrCellVersion = '20231107';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
