@@ -916,7 +916,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             if not(iscell(filename)) && not(ischar(filename)) % if canceled - dont do anything
                 return
             end
-            save([mainpath filename],'FEATURES')
+            save([mainpath filename],'FEATURES', '-v7.3')
             % put file into listbox
             h=findobj(gcf,'Tag','listbox_features');
             set(h,'string',[get(h,'String');cellstr([mainpath filename])])
@@ -960,7 +960,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                     mkdir(folder_name);
                 end
                 filename=[temp_filename '_F.mat'];
-                save([folder_name filesep filename],'FEATURES')
+                save([folder_name filesep filename],'FEATURES', '-v7.3')
                 cd ..
                 % put file into listbox
                 h=findobj(gcf,'Tag','listbox_features');
@@ -1020,7 +1020,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
             if not(iscell(filename)) && not(ischar(filename)) % if canceled - dont do anything
                 return
             end
-            save([mainpath filename],'FEATURES')
+            save([mainpath filename],'FEATURES', '-v7.3')
             % put file into listbox
             h=findobj(gcf,'Tag','listbox_features');
             set(h,'string',[get(h,'String');cellstr([mainpath filename])])
@@ -1064,7 +1064,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                     mkdir(folder_name);
                 end
                 filename=[temp_filename '_F.mat'];
-                save([folder_name filesep filename],'FEATURES')
+                save([folder_name filesep filename],'FEATURES', '-v7.3')
                 cd ..
                 % put file into listbox
                 h=findobj(gcf,'Tag','listbox_features');
@@ -1096,7 +1096,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         if not(iscell(filename)) && not(ischar(filename)) % if canceled - dont do anything
             return
         end
-        save([mainpath filename],'fullpath_ts')
+        save([mainpath filename],'fullpath_ts', '-v7.3')
     end
 
 % -------------------------------------------------------
@@ -1394,7 +1394,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         if not(iscell(filename)) && not(ischar(filename)) % if canceled - dont do anything
             return
         end
-        save([mainpath filename],'GROUP')
+        save([mainpath filename],'GROUP', '-v7.3')
     end
 
 % -------------------------------------------------------
