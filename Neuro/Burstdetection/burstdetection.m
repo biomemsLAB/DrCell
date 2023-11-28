@@ -219,11 +219,20 @@ function BURSTS=burstdetection(Name,SPIKES,rec_dur,pref)
 % --- Burstdetection_SELINGER (TH_min= 10^-1 = 100 ms) [Under construction!]  ------
     function BURSTS=Burstdetection_SELINGER(SPIKES,TH_min,flag_all_el) 
         
+        % if less than 3 spikes on an electrode, just init BURSTS and return
+        if size(SPIKES,1) <= 3
+            th = 0.1;
+            BURSTS=Burstdetection_ISImax(SPIKES,th,3,0);
+            return
+        end
+
         % calculate ISIs
         ISI = diff(SPIKES,1);
         ISI(ISI<=0)=NaN;
 
+
        for n=1:size(SPIKES,2)
+
            if ~isempty(nonzeros(ISI(:,n)))   
                
                % log ISI:

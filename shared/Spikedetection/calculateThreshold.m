@@ -1,5 +1,6 @@
 function [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW, SPIKEZ, Multiplier_neg, Multiplier_pos, Std_noisewindow, Size_noisewindow, HDrawdata,flag_waitbar, auto,win_beg, win_end, threshrmsdecide)
 
+flag_simple = 0;  % MC: if 0: use old DrCell logic, if 1: use simple threshold calculation
 
 % default values
 if nargin <= 8
@@ -23,7 +24,7 @@ flag_negative = SPIKEZ.neg.flag;
 flag_positive = SPIKEZ.pos.flag;
 
 
-waitbar_counter2 = 0.7;
+waitbar_counter2 = 0; %0.7;
 
 % save parameter in spiketrain file:
 SPIKEZ.neg.THRESHOLDS.Multiplier=Multiplier_neg;
@@ -53,6 +54,7 @@ calc_end = Size_noisewindow*SaRa;
 
 CALC = zeros((2*int16(SaRa)),(size(RAW.M,2)));
 
+if ~flag_simple
 if auto
     for n=1:size(RAW.M,2)
         if  HDrawdata==1 %Sh_Kh for .brw Data
@@ -61,7 +63,7 @@ if auto
             m=RAW.M;
         end
         while nr_win < (2/Size_noisewindow)             % use two secondes of the signal
-            
+
             %calculate STD in windows
             if  HDrawdata==1 %Sh.Kh for .brw Data
                 v = ver;
@@ -79,7 +81,7 @@ if auto
                     sigma = std(m(window_beg:window_end,n));
                 end
             end
-                if((sigma < Std_noisewindow) && (sigma > 0))
+            if((sigma < Std_noisewindow) && (sigma > 0))
                 if  HDrawdata==1 %Sh.Kh for .brw Data
                     CALC(calc_beg:calc_end,n) = m(window_beg:window_end);
                 else
@@ -89,14 +91,14 @@ if auto
                 calc_end = calc_end + Size_noisewindow*SaRa;
                 window_beg = window_beg + int32(Size_noisewindow*SaRa);
                 window_end = window_end + int32(Size_noisewindow*SaRa);
-                
+
                 if window_end>size(T,2) break; end %#ok
                 ELEC_CHECK(n) = 1;
                 nr_win = nr_win + 1;
             else
                 window_beg = window_beg + int32(Size_noisewindow/2*SaRa);
                 window_end = window_end + int32(Size_noisewindow/2*SaRa);
-                
+
                 if window_end>size(T,2) break; end %#ok
                 if ((window_beg > 0.5*size(T,2)) && (nr_win == 0))
                     ELEC_CHECK(n) = 0; %noisy
@@ -104,25 +106,20 @@ if auto
                 end
             end
         end
-        
+
         nr_win = 0;
         window_beg = int32(0.01*SaRa+1);
         window_end = int32((0.01+Size_noisewindow)*SaRa);
         calc_beg = 1;
         calc_end = Size_noisewindow*SaRa;
-        if HDrawdata ==1 || size(RAW.M,2)>60
-            %if n==1000 || n==2000 || n==3000 || n==4000
-            waitbar_counter2 = waitbar_counter2+n*(0.7/nr_channel);
-            if flag_waitbar; waitbar(waitbar_counter2,h_wait); end
-        else
-            waitbar_counter2 = waitbar_counter2+(0.7/nr_channel);
-            if flag_waitbar; waitbar(waitbar_counter2,h_wait); end
-        end
-        %if HDrawdata==0; break; end % Sh.Kh. Uncommented by MC
+
+        waitbar_counter2 = n/nr_channel;
+        if flag_waitbar; waitbar(waitbar_counter2,h_wait); end
+  
     end
     COL_RMS = sqrt(mean(CALC.^2));
     COL_SDT = std(CALC);
-    
+
 elseif auto == 0                    % Manuell
     if flag_waitbar; waitbar(.6,h_wait,'Please wait - Thresholds are calculated...'); end
     for n=1:size(RAW.M,2)
@@ -144,13 +141,15 @@ elseif auto == 0                    % Manuell
     end
 end
 
+
+
 if flag_negative
     if threshrmsdecide
         THRESHOLDS = -multiplier.*COL_RMS;
     else
         THRESHOLDS = -multiplier.*COL_SDT;
     end
-    
+
     %new vectorize Sh.Kh
     ECH=find(ELEC_CHECK==0);
     for n=1:size(ECH,2)
@@ -160,25 +159,52 @@ end
 
 
 if flag_positive
-    
+
     if flag_waitbar; waitbar(.5,h_wait,'Please wait - positive thresholds are calculated...'); end
     multiplier = Multiplier_pos;
-    
+
     if threshrmsdecide
         THRESHOLDS_pos = multiplier.*COL_RMS;
     else
         THRESHOLDS_pos = multiplier.*COL_SDT;
     end
-    
+
     %new vectorize Sh.Kh
     ECH=find(ELEC_CHECK==0);
     for n=1:size(ECH,2)
         THRESHOLDS_pos(ECH(n))=10000;
     end
-    
+
 else
     THRESHOLDS_pos=0;
 end
+end
+
+% Test: perform simplified threshold calculation:
+if flag_simple
+    for n = 1:size(RAW.M,2)
+        COL_SDT(n) = std(RAW.M(:,n));
+        COL_RMS(n) = sqrt(mean(RAW.M(:,n).^2));
+        waitbar_counter2 = n/nr_channel;
+        if flag_waitbar; waitbar(waitbar_counter2,h_wait); end
+    end
+    
+    if flag_negative
+        if threshrmsdecide
+            THRESHOLDS = -Multiplier_neg.*COL_RMS;
+        else
+            THRESHOLDS = -Multiplier_neg.*COL_SDT;
+        end
+    end
+    if flag_positive
+        if threshrmsdecide
+            THRESHOLDS_pos = Multiplier_pos.*COL_RMS;
+        else
+            THRESHOLDS_pos = Multiplier_pos.*COL_SDT;
+        end
+    end
+end
+
 
 % save thresholds in spiketrain-file
 SPIKEZ.neg.THRESHOLDS.Th=THRESHOLDS;

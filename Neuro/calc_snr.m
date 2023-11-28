@@ -14,7 +14,7 @@ if ~isnan(SPIKEZ.neg.THRESHOLDS.Std_noisewindow) && ~isnan(SPIKEZ.neg.THRESHOLDS
     calc_beg = 1;
     calc_end = PREF(16)*SaRa;
     
-    CALC = zeros((2*SaRa),(size(RAW.M,2)));
+    CALC = zeros(int64(2*SaRa),(size(RAW.M,2)));
     SNR = zeros(1,size(RAW.M,2));
     SNR_dB = zeros(1,size(RAW.M,2));
     
