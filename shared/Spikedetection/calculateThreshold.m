@@ -183,8 +183,8 @@ end
 % Test: perform simplified threshold calculation:
 if flag_simple
     for n = 1:size(RAW.M,2)
-        COL_SDT(n) = std(RAW.M(:,n));
-        COL_RMS(n) = sqrt(mean(RAW.M(:,n).^2));
+        COL_SDT(n) = std(double(RAW.M(:,n)));
+        COL_RMS(n) = sqrt(mean(double(RAW.M(:,n)).^2));
         waitbar_counter2 = n/nr_channel;
         if flag_waitbar; waitbar(waitbar_counter2,h_wait); end
     end

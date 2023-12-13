@@ -2,6 +2,18 @@
 
 function [CM,CM_exh,CM_inh,DM]=TSPE_call(TS, rec_dur, flag_waitbar, FLAG_NORM)
 
+
+% Init
+CM = 0;
+CM_exh = 0;
+CM_inh = 0;
+DM = 0;
+
+if isempty(TS)
+    warning('Empty time stamp file!')
+    return
+end
+
 if nargin < 4
     FLAG_NORM=1;
 end

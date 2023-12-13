@@ -245,7 +245,7 @@ uicontrol('enable','on','Parent',t1,'Units','pixels','Position',[590 37 180 24],
 uicontrol('Parent',t1,'Units','pixels','Position',[590 66 180 24],'Tag','CELL_SixWellButton','String','6-Well-MEA','FontSize',9,'TooltipString','Consinder only one chamber of 6-Well-MEA.','Callback',@SixWellButtonCallback);
 
 % "Convert Axion-Files" - Button
-uicontrol('Parent',t1,'Units','pixels','Position',[392 37-29 180 24],'Tag','CELL_convertAxionButton','String','Convert Axion files','FontSize',9,'TooltipString','Convert one or more raw Axion 24-well files (converted to .csv) to DrCell compatible RAW.mat files. For each well a separate RAW.mat file is generated','Callback',@convertAxion24WellButtonCallback);
+uicontrol('Parent',t1,'Units','pixels','Position',[392 37-29 180 24],'Tag','CELL_convertAxionButton','String','Convert Axion files','FontSize',9,'TooltipString','Convert one or more Axion 24-well files (*.raw converted to *.csv or *_spike_list.csv) to DrCell compatible *.mat files. For each well a separate *.mat file is generated','Callback',@convertAxion24WellButtonCallback);
 
 
 % % "Import.brw-File" - Button
@@ -2501,6 +2501,13 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         % Settings:
         set(0, 'currentfigure', mainWindow); % set main window as current figure so "gcf" works correctly
         if spiketraincheck == 1
+            set(findobj(gcf,'Tag','CELL_dataFile'),'String',file);
+            set(findobj(gcf,'Tag','CELL_fileInfo'),'String',fileinfo{1});
+            set(findobj(gcf,'Tag','CELL_dataSaRa'),'String',SaRa);
+            set(findobj(gcf,'Tag','CELL_dataNrEl'),'String',nr_channel);
+            set(findobj(gcf,'Tag','CELL_dataDate'),'String',Date);
+            set(findobj(gcf,'Tag','CELL_dataTime'),'String',Time);
+            set(findobj(gcf,'Tag','CELL_dataDur'),'String',num2str(rec_dur));
             set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
             set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
             uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','5','Tag','STD_noisewindow');
@@ -2551,7 +2558,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             set(findobj(gcf,'Tag','CELL_dataNrEl'),'String',nr_channel);
             set(findobj(gcf,'Tag','CELL_dataDate'),'String',Date);
             set(findobj(gcf,'Tag','CELL_dataTime'),'String',Time);
-            set(findobj(gcf,'Tag','CELL_dataDur'),'String',rec_dur_string);
+            set(findobj(gcf,'Tag','CELL_dataDur'),'String',num2str(rec_dur));
             delete(findobj(0,'Tag','ShowSpikesBurstsperEL'));
             delete(findobj(0,'Tag','ShowSpikesBurstsperCell'));
             if nr_channel>1
@@ -3531,14 +3538,24 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
     function convertAxion24WellButtonCallback(~,~) % convert Axion raw .csv data to _RAW.mat files for each well
         
         if ~isempty(myPath) && ischar(myPath)
-            cd(myPath)
+            try
+                cd(myPath) 
+            end
         end
-        
+
+        msgbox('In the next window, please select the folder that contains the axion files (raw *.csv and/or *_spike_list.csv files). It is also possible to select a folder containing subfolders.');
+        uiwait(gcf); % wait until user clicks ok
+
         % "Open directory" Window
-        dir_name=uigetdir('Pick a Directory');
+        dir_name=uigetdir('Pick a Directory that contains axion *.csv and/or *_spike_list.csv files.');
         if dir_name == 0
             return
         end
+
+        input = inputdlg('Please enter the recording duration in seconds (will be used for *_spike_list.csv files): ');
+        axion_rec_dur = str2num(cell2mat(input));
+        input = inputdlg('Please enter the sample rate in Hz (will be used for *_spike_list.csv files): ');
+        axion_SaRa = str2num(cell2mat(input));
                 
         [dirarray,files]=subdir(dir_name);
         if ~iscell(dirarray)
@@ -3564,12 +3581,22 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                 
                 [~,filename,ext] = fileparts(current_file); % get file extension
                 
-                if strcmp(ext,'.csv') 
+                % if raw data (just ends with .csv)
+                if strcmp(ext,'.csv') && ~contains(filename, '_list') && ~contains(filename, '_counts')
                     
                     filepath = [current_dir filesep current_file];
                     
-                    disp(['Converting ' filepath '...'])
+                    disp(['Converting raw data ' filepath ' ...'])
                     axion24well2RAW(filepath)
+                end
+
+                % if spike data (ends with _spike_list.csv)
+                if strcmp(ext,'.csv') && contains(filename, '_spike_list')
+                    
+                    filepath = [current_dir filesep current_file];
+                    
+                    disp(['Converting spike data ' filepath ' ...'])
+                    axion24well2TS(filepath, axion_rec_dur, axion_SaRa)
                 end
                 
             end

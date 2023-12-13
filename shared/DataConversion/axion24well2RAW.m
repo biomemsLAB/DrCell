@@ -33,8 +33,8 @@ function axion24well2RAW(fullpath)
     numEl = size(elNamesUnique,2);
     
     % for each unique well, generate RAW.M
-    M = zeros(length(times),numEl);
     for wellNameUnique = wellNamesUnique
+        M = zeros(length(times),numEl);
         % for each unique electrode, write a column into RAW
         for idx_elName = 1:numEl
             elNameUnique = elNamesUnique{idx_elName};
@@ -67,7 +67,7 @@ function axion24well2RAW(fullpath)
         if ~exist(folder, 'dir')
            mkdir(folder)
         end
-        fullpathNew = [folder filesep filename '_' wellNameUnique{1}];
+        fullpathNew = [folder filesep wellNameUnique{1} '_' filename];
         
         saveRAW(RAW,fullpathNew);
     end

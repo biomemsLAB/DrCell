@@ -48,6 +48,15 @@ function [S,PREF] = SpikeContrast_fixed(TS,T, minBin, N)
         error('negative time stamps are not allowed')
     end
     
+    if size(TS,2)<2 
+       warning('File contains only one spike train.')
+       return 
+    end
+    if size(TS,1)<2
+       warning('File contains less than two spikes per spike train')
+       return
+    end
+    
     %% PARAMETER:
     % bin size decrease factor:
     binShrinkFactor=0.9;           

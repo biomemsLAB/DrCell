@@ -67,13 +67,13 @@ function [NB,AllSpikesPerBin,actElPerBin,Product,numberOfBins,Th]=networkburstde
 
     % Find NB from threshold
     [X,Y,begin,ending,duration,integral,peakMask] = detectSpikesFromThreshold(Product,Th);
-    NB.CORE=(X.*bin);%-x(1);
-    NB.BEG=begin.*bin;%-x(1);
-    NB.END=ending.*bin;%-x(1);
-    NB.BD=duration.*bin;
+    NB.CORE=(X'.*bin);  % X': transposed in order to get format needed by function "BurstParameterCalculation"
+    NB.BEG=begin'.*bin;
+    NB.END=ending'.*bin;
+    NB.BD=duration'.*bin;
     if ~isnan(X)
         for i=1:length(X)
-            NB.SIB(i)=sum(AllSpikesPerBin(begin(i):ending(i)));
+            NB.SIB(i,1)=sum(AllSpikesPerBin(begin(i):ending(i)));
         end
     end
 
