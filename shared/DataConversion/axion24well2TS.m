@@ -48,24 +48,26 @@ function axion24well2TS(fullpath, rec_dur, SaRa)
         for idx_elName = 1:size(elNamesUnique,2)
             elNameUnique = elNamesUnique(idx_elName);
     
+            idx_spike = 0;
             for i = 1:size(C,1)
                 ts = C{i, 3};  % time stamp in s
                 amp = C{i, 5};  % amplitude in mV
                 if ~isnan(ts)  % if time stamp is not NaN
                     wellName = C{i, 4}(1:2); % well name of current data
                     elName = C{i, 4}(4:5); % electrode, e.g. 12
-    
+
                     if strcmp(wellName, wellNameUnique) && strcmp(elName, elNameUnique) % if data belongs to current well and electrode
-                        TS(end+1, idx_elName) = ts;
-                        AMP(end+1, idx_elName) = amp * 1000; % convert to uV
+                        idx_spike = idx_spike + 1;
+                        TS(idx_spike, idx_elName) = ts;
+                        AMP(idx_spike, idx_elName) = amp * 1000; % convert to uV
                     end
                 end
             end
         end
 
-        % remove first row as it was needed to init TS and AMP
-        TS(1,:) = [];
-        AMP(1,:) = [];
+        % set all zeros to NaN
+        AMP(AMP==0) = NaN;
+        TS(TS==0) = NaN;
         
         % in case there are time stamps larger than rec_dur, delete these
         % time_stamps 
