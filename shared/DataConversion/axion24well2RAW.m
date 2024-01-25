@@ -2,7 +2,7 @@
 % separate RAW file is created)
 %
 % input:
-% fullpath: full path to the csv file
+% file_path: full path to the csv file
 %
 % output:
 % no return arguments but a folder "RAW" is created in "datapath" which
@@ -11,12 +11,12 @@
 % Author: Manuel Ciba
 % Date: 27.10.2023
 
-function axion24well2RAW(fullpath)
+function axion24well2RAW(file_path)
 
-    [filepath, filename, ext] = fileparts(fullpath);
+    [root_path, filename, ext] = fileparts(file_path);
 
     % read file
-    T = readtable(fullpath);
+    T = readtable(file_path);
 
     % get column names
     columnNames = T.Properties.VariableNames;
@@ -62,13 +62,14 @@ function axion24well2RAW(fullpath)
         EL_NAMES = {'11','12','13','14','21','22','23','24','31','32','33','34','41','42','43','44'};
         EL_NUMS = [11 12 13 14 21 22 23 24 31 32 33 34 41 42 43 44];
         RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,times',rec_dur,fileinfo,nr_channel); % NOTE: in this script T is the table, not the time vector. The time vector is saved in "times"
-        
-        folder = [filepath filesep 'RAW'];
+
+        folder = [root_path filesep 'RAW' filesep wellNameUnique{1}];
         if ~exist(folder, 'dir')
            mkdir(folder)
         end
-        fullpathNew = [folder filesep wellNameUnique{1} '_' filename];
+
+        file_pathNew = [folder filesep filename];
         
-        saveRAW(RAW,fullpathNew);
+        saveRAW(RAW,file_pathNew);
     end
 end
