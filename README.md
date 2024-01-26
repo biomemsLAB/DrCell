@@ -1,7 +1,8 @@
 # DrCell
 
+## About
 
-DrCell is a Matlab based tool to analyze electrophysiological data recorded with microelectrode array (MEA) chips.
+DrCell is a MATLAB based tool to analyze electrophysiological data recorded with microelectrode array (MEA) chips.
 
 Supported signals:
 - Neural signals
@@ -12,7 +13,29 @@ Supported MEA chips:
 - 3brain, 4096 electrode MEAs
 - Axion, 24 well-plate with 16 electrode MEAs per well.
 
+## Getting Started
 
+1. **Download:**
+   - Download the "DrCell" folder to your computer.
+
+2. **Execution:**
+   - Execute the main script by dragging and dropping "DrCell.m" into the MATLAB terminal.
+
+3. **Graphical User Interface (GUI):**
+   - The execution process automatically opens the Graphical User Interface (GUI) for DrCell.
+
+4. **Path Configuration:**
+   - The execution process automatically adds all DrCell subfolders to the MATLAB path environment.
+
+## Usage in Your Own Scripts
+
+### From MATLAB
+See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_from_MATLAB.m
+
+### From Python
+See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_from_Python.m
+
+## License
 DrCell was originally published in 2013 and is continously updated and expanded:
 C. Nick, M. Goldhammer, R. Bestel, F. Steger, A.W. Daus and C. Thielemann: 
 DrCell – A Software Tool for the Analysis of Cell Signals recorded with Extracellular Microelectrodes Signal Processing: 
@@ -32,26 +55,3 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 The GNU General Public License can be found at http://www.gnu.org/licenses/
-
-
-## Getting Started
-
-1. **Download:**
-   - Download the "DrCell" folder to your computer.
-
-2. **Execution:**
-   - Execute the main script by dragging and dropping "DrCell.m" into the MATLAB terminal.
-
-3. **Graphical User Interface (GUI):**
-   - The execution process automatically opens the Graphical User Interface (GUI) for DrCell.
-
-4. **Path Configuration:**
-   - The execution process automatically adds all DrCell subfolders to the MATLAB path environment.
-
-## Usage in Your Own Scripts
-
-### From MATLAB:
-See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_from_MATLAB.m
-
-### From Python:
-See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_from_Python.m
