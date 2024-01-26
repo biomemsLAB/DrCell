@@ -56,7 +56,7 @@ else
     if ispc  
         [~,systemview] = memory;
         if systemview.PhysicalMemory.Total>=((3/4)*systemview.PhysicalMemory.Available)% When enough memory is available
-            j = 1200;  % j: number of electrodes that get filtered in parallel 
+            j = 1200;
         else
             j = 1; % bei kleinem Arbeitsspeicher muss j klein sein
         end
@@ -68,7 +68,7 @@ else
         
         if flag_waitbar; waitbar(((floor(numel(MM(1,:))/j)-1)*j)/i,h_wait); end
         
-        if HDrawdata == 1
+        if HDrawdata ==1
             m=digital2analog_sh(MM(:,i+1:i+j),RAW);
             m(m<-4000)=0;
             m(m>4000)=0;
