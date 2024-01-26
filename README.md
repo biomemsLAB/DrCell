@@ -29,11 +29,11 @@ Supported MEA chips:
 
 ## Usage in Your Own Scripts
 
-### From MATLAB
-See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_from_MATLAB.m
+### With MATLAB
+See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_with_MATLAB.m
 
-### From Python
-See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_from_Python.m
+### With Python
+See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_with_Python.m
 
 ## License
 DrCell was originally published in 2013 and is continously updated and expanded:
