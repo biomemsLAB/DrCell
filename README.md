@@ -8,10 +8,12 @@ Supported signals:
 - Neural signals
 - Cardiac signals
 
-Supported MEA chips:
-- Multi channel systems (MCS), 60 electrode MEAs and 6-well electrode MEAs
-- 3brain, 4096 electrode MEAs
-- Axion, 24 well-plate with 16 electrode MEAs per well.
+Supported data types:
+- BioMEMS lab, 60 electrode MEAs and 6-well electrode MEAs (*.dat, *_RAW.mat, *_TS.mat)
+- GSI, 60 electrode MEAs (*.rhd)
+- Multi channel systems (MCS), 60 electrode MEAs (*.h5)   
+- 3brain, 4096 electrode MEAs (*.brw, *.bxr)
+- Axion, 24 well-plate with 16 electrode MEAs per well (*.spk, *.csv)
 
 ## Getting Started
 
