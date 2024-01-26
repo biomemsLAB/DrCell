@@ -1,23 +1,49 @@
 # DrCell
 
+## About
 
-DrCell is a Matlab based tool to analyze electrophysiological data recorded with microelectrode array (MEA) chips.
+DrCell is a MATLAB based tool to analyze electrophysiological data recorded with microelectrode array (MEA) chips.
 
 Supported signals:
 - Neural signals
 - Cardiac signals
 
-Supported MEA chips:
-- Multi channel systems (MCS), 60 electrode MEAs and 6-well electrode MEAs
-- 3brain, 4096 electrode MEAs
+Supported data types:
+- BioMEMS lab, 60 electrode MEAs and 6-well electrode MEAs (*.dat, *_RAW.mat, *_TS.mat)
+- GSI, 60 electrode MEAs (*.rhd)
+- Multi channel systems (MCS), 60 electrode MEAs (*.h5)   
+- 3brain, 4096 electrode MEAs (*.brw, *.bxr)
+- Axion, 24 well-plate with 16 electrode MEAs per well (*.spk, *.csv)
 
+## Getting Started
 
+1. **Download:**
+   - Download the "DrCell" folder to your computer.
+
+2. **Execution:**
+   - Execute the main script by dragging and dropping "DrCell.m" into the MATLAB terminal.
+
+3. **Graphical User Interface (GUI):**
+   - The execution process automatically opens the Graphical User Interface (GUI) for DrCell.
+
+4. **Path Configuration:**
+   - The execution process automatically adds all DrCell subfolders to the MATLAB path environment.
+
+## Usage in Your Own Scripts
+
+### With MATLAB
+See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_with_MATLAB.m
+
+### With Python
+See the example script DrCell/shared/Turorials/HowToUse_DrCell_Functions_with_Python.m
+
+## License
 DrCell was originally published in 2013 and is continously updated and expanded:
 C. Nick, M. Goldhammer, R. Bestel, F. Steger, A.W. Daus and C. Thielemann: 
 DrCell – A Software Tool for the Analysis of Cell Signals recorded with Extracellular Microelectrodes Signal Processing: 
 An International Journal (SPIJ) 7(2), 96-109, 2013.
 
-Copyright (C) 2009-2021 Christoph Nick, Michael Goldhammer, Robert
+Copyright (C) 2009-2024 Christoph Nick, Michael Goldhammer, Robert
 Bestel, Frederik Steger, Manuel Ciba, Johannes Forster, Andreas W. Daus, Christiane Thielemann
 
 This program is free software: you can redistribute it and/or modify
@@ -31,9 +57,3 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 The GNU General Public License can be found at http://www.gnu.org/licenses/
-
-## How to install
-
-Download the folder "DrCell" on your computer and execute "DrCell.m" (e.g. drag and drop "DrCell.m" into the MATLAB terminal). 
-This will open the GUI and add all DrCell subfolders into the MATLAB path environemnt which allows to use the DrCell functions from your own scripts. 
-
