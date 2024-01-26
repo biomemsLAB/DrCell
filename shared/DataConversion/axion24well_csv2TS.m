@@ -14,7 +14,7 @@
 % Author: Manuel Ciba
 % Date: 13.12.2023
 
-function axion24well2TS(file_path, rec_dur, SaRa)
+function axion24well_csv2TS(file_path, rec_dur, SaRa)
 
     [root_path, filename, ext] = fileparts(file_path);
 
@@ -95,7 +95,7 @@ function axion24well2TS(file_path, rec_dur, SaRa)
         % Convert to the desired format 'YYYYMMDD'
         formattedDate = datestr(originalDate, 'yyyymmdd');
 
-        file_path = [folder filesep formattedDate '_' Time '_TS.mat'];
+        file_path = [folder filesep formattedDate '_' Time '_spike_list_TS.mat'];
         
         saveSpikes(file_path, SPIKEZ);
     end

@@ -245,7 +245,7 @@ uicontrol('enable','on','Parent',t1,'Units','pixels','Position',[590 37 180 24],
 uicontrol('Parent',t1,'Units','pixels','Position',[590 66 180 24],'Tag','CELL_SixWellButton','String','6-Well-MEA','FontSize',9,'TooltipString','Consinder only one chamber of 6-Well-MEA.','Callback',@SixWellButtonCallback);
 
 % "Convert Axion-Files" - Button
-uicontrol('Parent',t1,'Units','pixels','Position',[392 37-29 180 24],'Tag','CELL_convertAxionButton','String','Convert Axion files','FontSize',9,'TooltipString','Convert one or more Axion 24-well files (*.raw converted to *.csv or *_spike_list.csv) to DrCell compatible *.mat files. For each well a separate *.mat file is generated','Callback',@convertAxion24WellButtonCallback);
+uicontrol('Parent',t1,'Units','pixels','Position',[392 37-29 180 24],'Tag','CELL_convertAxionButton','String','Convert Axion files','FontSize',9,'TooltipString','Convert one or more Axion 24-well files (*.raw converted to *.csv) to DrCell compatible *.mat files. For each well a separate *.mat file is generated','Callback',@convertAxion24WellButtonCallback);
 
 
 % % "Import.brw-File" - Button
@@ -3543,19 +3543,19 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             end
         end
 
-        msgbox('In the next window, please select the folder that contains the axion files (raw *.csv and/or *_spike_list.csv files). It is also possible to select a folder containing subfolders.');
+        msgbox('In the next window, please select the folder that contains the axion files (raw *.csv and/or *.spk files). It is also possible to select a folder containing subfolders.');
         uiwait(gcf); % wait until user clicks ok
 
         % "Open directory" Window
-        dir_name=uigetdir('Pick a Directory that contains axion *.csv and/or *_spike_list.csv files.');
+        dir_name=uigetdir('Pick a Directory that contains axion *.csv and/or *.spk files.');
         if dir_name == 0
             return
         end
 
-        input = inputdlg('Please enter the recording duration in seconds (will be used for *_spike_list.csv files): ');
-        axion_rec_dur = str2num(cell2mat(input));
-        input = inputdlg('Please enter the sample rate in Hz (will be used for *_spike_list.csv files): ');
-        axion_SaRa = str2num(cell2mat(input));
+        %input = inputdlg('Please enter the recording duration in seconds (will be used for *_spike_list.csv files): ');
+        %axion_rec_dur = str2num(cell2mat(input));
+        %input = inputdlg('Please enter the sample rate in Hz (will be used for *_spike_list.csv files): ');
+        %axion_SaRa = str2num(cell2mat(input));
                 
         [dirarray,files]=subdir(dir_name);
         if ~iscell(dirarray)
@@ -3580,23 +3580,24 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                 current_file = filearray{iii};
                 
                 [~,filename,ext] = fileparts(current_file); % get file extension
+                filepath = [current_dir filesep current_file];
                 
                 % if raw data (just ends with .csv)
                 if strcmp(ext,'.csv') && ~contains(filename, '_list') && ~contains(filename, '_counts')
-                    
-                    filepath = [current_dir filesep current_file];
-                    
                     disp(['Converting raw data ' filepath ' ...'])
-                    axion24well2RAW(filepath)
+                    axion24well_csv2RAW(filepath)
                 end
 
                 % if spike data (ends with _spike_list.csv)
-                if strcmp(ext,'.csv') && contains(filename, '_spike_list')
-                    
-                    filepath = [current_dir filesep current_file];
-                    
+                %if strcmp(ext,'.csv') && contains(filename, '_spike_list')
+                %    disp(['Converting spike data ' filepath ' ...'])
+                %    axion24well_csv2TS(filepath, axion_rec_dur, axion_SaRa)
+                %end
+
+                % if .spk file
+                if strcmp(ext, '.spk')
                     disp(['Converting spike data ' filepath ' ...'])
-                    axion24well2TS(filepath, axion_rec_dur, axion_SaRa)
+                    axion24well_spk2TS(filepath)
                 end
                 
             end

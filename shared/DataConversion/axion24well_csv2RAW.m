@@ -11,7 +11,7 @@
 % Author: Manuel Ciba
 % Date: 27.10.2023
 
-function axion24well2RAW(file_path)
+function axion24well_csv2RAW(file_path)
 
     [root_path, filename, ext] = fileparts(file_path);
 
