@@ -9,7 +9,11 @@
 %           time_win:               window length in seconds (if duration of all TS files is 300 s and parameter shall be calculated for every 60 s, set time_win=60)
 %           FR_min:                 minimum firing rate (aka spike rate) in spikes/minute to be active (e.g. FR_min=6, all electrodes are cleared that contains less than 6 spikes per minute)
 %           N:                      number of active electrodes (only needed for function "Sync_Contrast_fixed")
-%           binSize:                specify binSize (default = 500 ms)
+%           binSize:                specify binSize in seconds for bin-dependent-features. Use binSize = []
+%                                   to use default values.
+%           flag_HDMEA:             0: HDMEA-mode is inactive, 1: HDMEA-mode is active
+%           flag_norm:              0: TSPE does not use normalization, 1: TSPE uses normalization
+%           flag_waitbar            0: no waitbar, 1: display waitbar window
 %
 %
 % output:   WIN:                        structure containing all parameter for each time_win
