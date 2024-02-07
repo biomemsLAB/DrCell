@@ -22,7 +22,7 @@ function [TS,AMP]=getSpikeAmplitudes(raw,TS,SaRa,flag_isHDMEAmode)
     end
     
     if flag_isHDMEAmode % convert values of amplitude if HDMEA data are used
-        AMP=digital2analog_sh(AMP,raw);
+        AMP=digital2analog_sh(AMP,raw.BitDepth, raw.MaxVolt, raw.SignalInversion);
         AMP(AMP==-4125)=NaN;
     end
 end

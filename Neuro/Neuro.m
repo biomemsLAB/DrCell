@@ -5,6 +5,8 @@
 
 function Neuro()
 
+close all;
+clc
 disp ('--- Neuro ---');
 
 
@@ -296,7 +298,7 @@ uicontrol('Parent',t2,'Units','pixels','Position',[580 37 110 24],'Tag','CELL_in
 uicontrol('Parent',t2,'Units','pixels','Position',[705 37 110 24],'Tag','CELL_restoreButton','String','Restore Data','FontSize',10,'Enable','off','TooltipString','undo all filters and restore original data.','Callback',@unfilterButtonCallback);
 
 % "Apply" - Button
-uicontrol('Parent',t2,'Units','pixels','Position',[705 8 110 24],'Tag','CELL_applyButton','String','Apply...','FontSize',10,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@Applyfilter);
+uicontrol('Parent',t2,'Units','pixels','Position',[705 8 110 24],'Tag','CELL_applyButton','String','Apply...','FontSize',10,'Enable','off','TooltipString','Apply the filter.','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@Applyfilter);
 
 % "Partially clear Signal" - Button
 uicontrol('Parent',t2,'Units','pixels','Position',[705 66 110 24],'Tag','CELL_partClearButton','String','part. clear Signal','FontSize',10,'Enable','off','TooltipString','Partially clear raw signal (from t1 to t2) on all electrodes.','Callback',@partClearCallback);
@@ -306,123 +308,127 @@ uicontrol('Parent',t2,'Units','pixels','Position',[580 8 110 24],'Tag','CELL_smo
 
 
 %% Tab3 (Threshold)
-% Factor sigma to find spike-free windows
-uicontrol('Parent',t3,'Units','pixels','Position',[8 85 110 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','FontWeight','bold','String','Find Basenoise');
+
+% Basenoise settings:
+% String: Headline
+uicontrol('Parent',t3,'Units','pixels','Position',[8 85 220 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','Enable','off','FontWeight','bold','String','Basenoise Settings');
 uicontrol('Parent',t3,'Units','pixels','Position',[8 60 112 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Basefactor Noise');
 uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','5','Tag','STD_noisewindow');
 uicontrol('Parent',t3,'Units','pixels','Position',[8 31 112 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Windowsize in ms');
 uicontrol('Parent',t3,'Units','pixels','Position',[120 33 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','50','Tag','Size_noisewindow');
-uicontrol('Parent',t3,'Units','pixels','Position',[8 5 112 20],'Tag','CELL_HelpThreshold','String','Help?...','FontSize',10,'Enable','off','TooltipString','Explanations Threshold Calculation.','fontweight','bold','Callback',@HelpThresholdFunction);
-
-
-
-% Thresholds-selection
-uicontrol('Parent',t3,'Units','pixels','Position',[208 85 220 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Threshold Calculation Standard');
-uicontrol('Parent',t3,'Units','pixels','Position',[280 31 50 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Factor');
-uicontrol('Parent',t3,'Units','pixels','Position',[330 33 18 20],'style','edit','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox');
-
-% THRESHOLDS_pos (for positve thresholds to detect positve spikes)
-uicontrol('Parent',t3,'Units','Pixels','Position', [390 20 110 22],'Tag','negThCheckbox','String','Neg. Spikes','Enable','off','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','set threshold for negative spikes','Callback',@activateNegTh); % checkbox to activate negative threshold
-uicontrol('Parent',t3,'Units','Pixels','Position', [390 0 110 22],'Tag','posThCheckbox','String','Pos. Spikes','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','set threshold for positive spikes','Callback',@activatePosTh); % checkbox to activate positive threshold
-uicontrol('Parent',t3,'Units','pixels','Position',[350 33 18 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox_pos'); % factor for positive threshold
-
-% Dynamic Threshold
-uicontrol('Parent',t3,'Units','Pixels','Position', [390 40 110 22],'Tag','dynThCheckbox','String','Dyn. Th','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Calcuate a dynamic threshold in case the raw signal is not highpass filtered (negative and/or positive thresholds possible)'); % checkbox to activate dynamic threshold
-
-
-% Thresholds Auto or Manuell
+% Manual window region:
+uicontrol('Parent',t3,'Units','pixels','Position',[8 5 40 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','time_start','String','-','enable','off');
+uicontrol('Parent',t3,'Units','pixels','Position',[8+44 5 10 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','-','Tag','text_2','enable','off');
+uicontrol('Parent',t3,'Units','pixels','Position',[8+44+20 5 40 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','time_end','String','-','enable','off');
+uicontrol('Parent',t3,'Units','pixels','Position',[8+44+20+40 5 15 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','s','Tag','text_3','enable','off');
+% help button
+uicontrol('Parent',t3,'Units','pixels','Position',[150 90 20 20],'Tag','CELL_HelpThreshold','String','?','FontSize',10,'Enable','off','TooltipString','Explanations Threshold Calculation.','fontweight','bold','Callback',@HelpThresholdFunction);
+% auto or manual
 radiogroup2 = uibuttongroup('Parent',t3,'visible','on','Units','Pixels','Position',[150 10 100 40],'BackgroundColor', GUI_Color_BG,'BorderType','none','SelectionChangeFcn',@handler2);
 uicontrol('Parent',radiogroup2,'Units','normalized','Position',[0 0.5 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_auto','String','Auto','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in thermal noise');
 uicontrol('Parent',radiogroup2,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_manu','String','Manual','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in given interval');
-
+% rsm or sigma
 radiogroup3 = uibuttongroup('Parent',t3,'visible','on','Units','Pixels','Position',[150 50 100 40],'BackgroundColor', GUI_Color_BG,'BorderType','none','SelectionChangeFcn',@handler3);
 uicontrol('Parent',radiogroup3,'Units','normalized','Position',[0 0.5 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_rms','String','rms','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in thermal noise');
 uicontrol('Parent',radiogroup3,'Units','normalized','Position',[0 0 .9 .4],'Style','radio','HorizontalAlignment','left','Tag','thresh_sigma','String','sigma','Enable','off','FontSize',9,'BackgroundColor', GUI_Color_BG,'TooltipString','find threshold in given interval');
 
-uicontrol('Parent',t3,'Units','pixels','Position',[280 62 40 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','time_start','String','-','enable','off');
-uicontrol('Parent',t3,'Units','pixels','Position',[322 60 10 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','-','Tag','text_2','enable','off');
-uicontrol('Parent',t3,'Units','pixels','Position',[330 62 40 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','time_end','String','-','enable','off');
-uicontrol('Parent',t3,'Units','pixels','Position',[370 60 15 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','s','Tag','text_3','enable','off');
 
+% Thresholds settings:
+xpos = 40;
+% String: Headline
+uicontrol('Parent',t3,'Units','pixels','Position',[240+xpos 85 220 20],'Tag','CELL_sensitivityBoxtext','style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Threshold Settings');
+% Edit: Factor (neg)
+%uicontrol('Parent',t3,'Units','pixels','Position',[280 31 50 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Factor');
+uicontrol('Parent',t3,'Units','pixels','Position',[350+xpos 20 18 20],'style','edit','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox','TooltipString','Factor which is used to calculate the positive threshold.');
+% Edit: Factor (pos)
+uicontrol('Parent',t3,'Units','pixels','Position',[350+xpos 0 18 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','5','Tag','CELL_sensitivityBox_pos','TooltipString','Factor which is used to calculate the positive threshold.'); % factor for positive threshold
+% Checkbox Simple Threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [240+xpos 60 110 22],'Tag','Checkbox_simpleThreshold','String','Simple','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Use simple threshold calculation: threshold = std(Signal)*Factor');
+% Checkbox Dynamic Threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [240+xpos 40 110 22],'Tag','dynThCheckbox','String','Dyn. Th','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Calcuate a dynamic threshold in case the raw signal is not highpass filtered (negative and/or positive thresholds possible)'); % checkbox to activate dynamic threshold
+% Checkbox positive threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [240+xpos 0 110 22],'Tag','posThCheckbox','String','Pos. Spikes','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Positive thresholds','Callback',@activatePosTh); % checkbox to activate positive threshold
+% Checkbox negative threshold
+uicontrol('Parent',t3,'Units','Pixels','Position', [240+xpos 20 110 22],'Tag','negThCheckbox','String','Neg. Spikes','Enable','off','Value',1,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Negative thresholds','Callback',@activateNegTh); % checkbox to activate negative threshold
 % "Calculate" - Button
-uicontrol('Parent',t3,'Units','pixels','Position',[280 5 100 24],'Tag','CELL_calculateButton','String','Calculate...','FontSize',11,'Enable','off','TooltipString','Threshold. ','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@CalculateThreshold);
-
-%Set Thresholds manually
-
-uicontrol('Parent',t3,'Units','Pixels','Position', [430 60 110 25],'Tag','Manual_threshold','String','All after','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Setting all thresholds after the selected one');
-
-uicontrol('Parent',t3,'Units','pixels','Position',[430 85 180 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Enter Threshold');
-uicontrol('Parent',t3,'Units','pixels','Position',[500 58 100 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Electrode');
-uicontrol('Parent',t3,'Units','pixels','Position',[620 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','Elsel_Thresh');
-uicontrol('Parent',t3,'Units','pixels','Position',[500 31 150 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Current Threshold');
-uicontrol('Parent',t3,'Units','pixels','Position',[620 33 120 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','CELL_ShowcurrentThresh');
-
-uicontrol('Parent',t3,'Units','pixels','Position',[590 60 20 20],'Tag','CELL_safeButton','String','-','FontSize',10,'Enable','off','TooltipString','Safe Threshold. ','fontweight','bold','Callback',@Elminus);
-uicontrol('Parent',t3,'Units','pixels','Position',[660 60 20 20],'Tag','CELL_safeButton','String','+','FontSize',10,'Enable','off','TooltipString','Safe Threshold. ','fontweight','bold','Callback',@Elplus);
+uicontrol('Parent',t3,'Units','pixels','Position',[380+xpos 5 100 24],'Tag','CELL_calculateButton','String','Calculate...','FontSize',11,'Enable','off','TooltipString','Threshold. ','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@CalculateThreshold);
+% "Open TH-File" and "Save TH-File" (FS)
+uicontrol('Parent',t3,'Units','pixels','Position',[380+xpos 35 80 24],'Tag','THFile_openButton','String','Open','FontSize',10,'Enable','off','TooltipString','Open Threshold from external File (_TH.mat) in current folder','Callback',@ELgetThresholdFile);
+uicontrol('Parent',t3,'Units','pixels','Position',[380+xpos 60 80 24],'Tag','THFile_saveButton','String','Save','FontSize',10,'Enable','off','TooltipString','Safe Threshold in external File in current folder','Callback',@ELsaveThresholdFile);
 
 
+% Set Thresholds manually
+% String: Headline
+uicontrol('Parent',t3,'Units','pixels','Position',[550 85 180 20],'style','text','HorizontalAlignment','left','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','Enable','off','FontWeight','bold','String','Manual Threshold');
+% String: all after
+uicontrol('Parent',t3,'Units','Pixels','Position', [550 60 110 25],'Tag','Manual_threshold','String','All after','Enable','off','Value',0,'Style','checkbox','BackgroundColor', GUI_Color_BG,'TooltipString','Setting all thresholds after the selected one');
+% String: Electrode
+uicontrol('Parent',t3,'Units','pixels','Position',[550 58 100 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Electrode');
+% Edit: electrode select
+uicontrol('Parent',t3,'Units','pixels','Position',[620+50 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','Elsel_Thresh');
+% String: current threshold
+uicontrol('Parent',t3,'Units','pixels','Position',[550 31 150 22],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Current Threshold');
+% Edit: current threshold value
+uicontrol('Parent',t3,'Units','pixels','Position',[620+50 33 50 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','Tag','CELL_ShowcurrentThresh');
+% Button: +
+uicontrol('Parent',t3,'Units','pixels','Position',[590+50 60 20 20],'Tag','CELL_safeButton','String','-','FontSize',10,'Enable','off','TooltipString','Safe Threshold. ','fontweight','bold','Callback',@Elminus);
+% Button: -
+uicontrol('Parent',t3,'Units','pixels','Position',[660+50 60 20 20],'Tag','CELL_safeButton','String','+','FontSize',10,'Enable','off','TooltipString','Safe Threshold. ','fontweight','bold','Callback',@Elplus);
 % "Show" - Button
 uicontrol('Parent',t3,'Units','pixels','Position',[760 60 60 24],'Tag','CELL_safeButton','String','Show...','FontSize',10,'Enable','off','TooltipString','Show Threshold. ','fontweight','bold','Callback',@ElgetThresholdfunction);
-
 % "Set" - Button
 uicontrol('Parent',t3,'Units','pixels','Position',[760 35 60 24],'Tag','CELL_safeButton','String','Set...','FontSize',10,'Enable','off','TooltipString','Set Threshold. ','fontweight','bold','Callback',@ELsaveThresholdfunction);
-
 % "Save TH for all EL" - Button
 uicontrol('Parent',t3,'Units','pixels','Position',[690 5.5 130 24],'Tag','CELL_calculateButton','String','Set TH for all EL','FontSize',10,'Enable','off','TooltipString','Threshold. ','fontweight','bold','Callback',@Thresholdforall);
 
-% "Open TH-File" and "Save TH-File" (FS)
-uicontrol('Parent',t3,'Units','pixels','Position',[500 5 80 24],'Tag','THFile_openButton','String','Open TH-File','FontSize',10,'Enable','off','TooltipString','Open Threshold from external File in current folder','fontweight','bold','Callback',@ELgetThresholdFile);
-uicontrol('Parent',t3,'Units','pixels','Position',[600 5 80 24],'Tag','THFile_saveButton','String','Save TH-File','FontSize',10,'Enable','off','TooltipString','Safe Threshold in external File in current folder','fontweight','bold','Callback',@ELsaveThresholdFile);
 
 
 
 
 %% Tab 4 (Analysis):
 
+% Burst Settings
 % Preferences Drop Down
-uicontrol('Parent',t4,'Units','pixels','Position',[8 85 130 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','String','Default Settings','Enable','off');
+uicontrol('Parent',t4,'Units','pixels','Position',[8 85 130 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','String','Burst Settings','Enable','off');
 defaulthandle = uicontrol('Parent',t4,'Units','pixels','Position',[8 66 130 20],'Tag','CELL_DefaultBox','String',['[Baker]    ';'[Kapucu]   ';'[Selinger] ';'[Wagenaar4]';'[Wagenaar3]';'16Hz       ';'[Cocatre]  '],'Enable','off','Tooltipstring','Default settings for Spike and Burstdetection','Value',1,'Style','popupmenu','callback',@handler);
-
 %Help - Info about burstdetection
 uicontrol('Parent',t4,'Units','pixels','Position',[8 37 100 20],'Tag','CELL_HelpBurst','String','Help?...','FontSize',10,'Enable','off','TooltipString','Explanations for different Burstdefinitions.','fontweight','bold','Callback',@HelpBurstFunction);
+%uicontrol('Parent',t4,'Units','pixels','Position',[160 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Spike & Burst Criteria');
 
+uicontrol('Parent',t4,'Units','pixels','Position',[160 58  120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Min. SIB','TooltipString','Minimum spikes in burst (SIB): a burst has to contain at least this number of spikes.');
+uicontrol('Parent',t4,'Units','pixels','Position',[290 60  30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','3','Tag','SIB_min');
+uicontrol('Parent',t4,'Units','pixels','Position',[160 36  120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. IBI (ms)','TooltipString','Maximum inter burst interval (IBI): time after a burst, where no other burst can be detected.');
+uicontrol('Parent',t4,'Units','pixels','Position',[290 38  30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','0','Tag','IBI_max');
+uicontrol('Parent',t4,'Units','pixels','Position',[160 14  150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. ISI (ms)','TooltipString','Maximum inter spike interval (ISI): if time between spikes is smaller than this value, spikes belong to a burst.');
+uicontrol('Parent',t4,'Units','pixels','Position',[290 16 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','100','Tag','ISI_max');
 
-
-% Spike/Burst-preferences
-uicontrol('Parent',t4,'Units','pixels','Position',[160 85 180 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','FontWeight','bold','String','Spike & Burst Criteria');
-uicontrol('Parent',t4,'Units','pixels','Position',[160 58 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Refractory Time in ms','TooltipString','time, where no other spike is detected after having detected one before.');
-uicontrol('Parent',t4,'Units','pixels','Position',[290 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','0','Tag','t_ref');
-uicontrol('Parent',t4,'Units','pixels','Position',[160 36 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Min. Spikes per Burst','TooltipString','a burst has to contain at least this number of spikes.');
-uicontrol('Parent',t4,'Units','pixels','Position',[290 38 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','3','Tag','SIB_min');
-uicontrol('Parent',t4,'Units','pixels','Position',[160 14 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. Interburstinterval in ms','TooltipString','time, where no other burst is detected after having detected one before.');
-uicontrol('Parent',t4,'Units','pixels','Position',[290 16 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','0','Tag','IBI_max');
-uicontrol('Parent',t4,'Units','pixels','Position',[340 58 150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. Interspikeinterval in ms','TooltipString','as long time between spikes is smaller than this value, spikes belong to a burst.');
-uicontrol('Parent',t4,'Units','pixels','Position',[500 60 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','100','Tag','ISI_max');
-%uicontrol('Parent',t4,'Units','pixels','Position',[340 36 150 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Max. Time other SiBs in ms');
-%uicontrol('Parent',t4,'Units','pixels','Position',[500 38 30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','100','Tag','t_nn');
-
-% "ISI-Histogram" - Button
-uicontrol('Parent',t4,'Units','pixels','Position',[550 58 105 25],'Tag','CELL_ISIhistogram','String','ISI-Histogram','FontSize',11,'Enable','off','TooltipString','Show Interspikeinterval-Histogram.','Callback',@ISIhistogramButtonCallback);
+% Spike-Settings
+uicontrol('Parent',t4,'Units','pixels','Position',[450 85 130 20],'style','text','HorizontalAlignment','left','FontWeight','bold','BackgroundColor', GUI_Color_BG,'FontSize',10,'units','pixels','String','Spike Settings','Enable','off');
+% Refractory time
+uicontrol('Parent',t4,'Units','pixels','Position',[450 58 120 20],'style','text','HorizontalAlignment','left','Enable','off','BackgroundColor', GUI_Color_BG,'FontSize',9,'units','pixels','String','Refract. Time (ms)','TooltipString','Refractory time: time after a spike, where no other spike can be detected.');
+uicontrol('Parent',t4,'Units','pixels','Position',[450+130 60  30 20],'style','edit','HorizontalAlignment','left','Enable','off','FontSize',9,'units','pixels','String','0','Tag','t_ref');
 
 % negative/positive spike decision and preferences
-uicontrol('Parent',t4,'Units','pixels','Position',[450 27 200 20],'Style','checkbox','Tag','negSpike_Box','String','neg. Spikes','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','only analyse negative Spikes');
-uicontrol('Parent',t4,'Units','pixels','Position',[450 7 200 20],'Style','checkbox','Tag','posSpike_Box','String','pos. Spikes','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','only analyse positive Spikes');
+uicontrol('Parent',t4,'Units','pixels','Position',[450 22 200 20],'Style','checkbox','Tag','negSpike_Box','String','neg. Spikes','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','only analyse negative Spikes');
+uicontrol('Parent',t4,'Units','pixels','Position',[450 2 200 20],'Style','checkbox','Tag','posSpike_Box','String','pos. Spikes','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','only analyse positive Spikes');
+% Spikedetection (SWTTEO, F. Lieb)
+uicontrol('Parent',t4,'Units','pixels','Position',[450 42 200 20],'Style','checkbox','Tag','Spike2_Box','String','SWTTEO','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','If checked, use a combination of the normal spikedetection and those of F. Lieb');
+
 
 % "Analyse" - Button
-uicontrol('Parent',t4,'Units','pixels','Position',[550 7 105 25],'Tag','CELL_analyzeButton','String','Analyze...','FontSize',11,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@Analysedecide);
+uicontrol('Parent',t4,'Units','pixels','Position',[705 8 110 24],'Tag','CELL_analyzeButton','String','Analyze...','FontSize',11,'Enable','off','TooltipString','Automated Spike/Burst-Analysis.','fontweight','bold','BackgroundColor',GUI_Color_BigButton,'Callback',@Analysedecide);
 
 % Spikedetection
-uicontrol('Parent',t4,'Units','pixels','Position',[680 87 200 20],'Style','checkbox','Tag','Spike_Box','String','Spikedetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Spikedetection');
-% Spikedetection (SWTTEO, F. Lieb)
-uicontrol('Parent',t4,'Units','pixels','Position',[780 87 200 20],'Style','checkbox','Tag','Spike2_Box','String','SWTTEO','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','If checked, use a combination of the normal spikedetection and those of F. Lieb');
+xoff = 500; % set it outside of GUI because currently not needed
+uicontrol('Parent',t4,'Units','pixels','Position',[680+xoff 87 200 20],'Style','checkbox','Tag','Spike_Box','String','Spikedetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Spikedetection');
 % Burstdetection activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 67 200 20],'Style','checkbox','Tag','Burst_Box','String','Burstdetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Burstdetection');
+uicontrol('Parent',t4,'Units','pixels','Position',[680+xoff  67 200 20],'Style','checkbox','Tag','Burst_Box','String','Burstdetection','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Burstdetection');
 % SBE-detection activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 47 200 20],'Style','checkbox','Tag','SBE_Box','String','SBEdetection','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables SBEdetection (SBE=synchronous burst events)');
+uicontrol('Parent',t4,'Units','pixels','Position',[680+xoff  47 200 20],'Style','checkbox','Tag','SBE_Box','String','SBEdetection','FontSize',9,'Value',0,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables SBEdetection (SBE=synchronous burst events)');
 % SBE-detection_old activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 27 200 20],'Style','checkbox','Tag','SBE_old_Box','String','SBEdetection (old)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables SBEdetection (old version)');
+uicontrol('Parent',t4,'Units','pixels','Position',[680+xoff  27 200 20],'Style','checkbox','Tag','SBE_old_Box','String','SBEdetection (old)','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables SBEdetection (old version)');
 % NETWORKBURSTS activate
-uicontrol('Parent',t4,'Units','pixels','Position',[680 7 200 20],'Style','checkbox','Tag','NB_Box','String','Networkbursts','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Networkburstdetection');
+uicontrol('Parent',t4,'Units','pixels','Position',[680+xoff  7 200 20],'Style','checkbox','Tag','NB_Box','String','Networkbursts','FontSize',9,'Value',1,'Enable','off','BackgroundColor', GUI_Color_BG,'TooltipString','En/Disables Networkburstdetection');
 
 
 %% Tab 5 (Postprocessing):
@@ -491,6 +497,10 @@ uicontrol('Parent',t5,'Units','pixels','Position',[705 66 110 24],'String','min.
 
 % "Stationarity"- Button
 uicontrol('Parent',t5,'Units','pixels','Position',[705 37 110 24],'String','Stationarity','Tag','CELL_Stationarity','FontSize',9,'Enable','off','TooltipString','Test all spike trains for non-stationarity according to Eggermont et al.','Callback',@Stationarity_ButtonCallback);
+
+% "ISI-Histogram" - Button
+uicontrol('Parent',t5,'Units','pixels','Position',[705 8 110 24],'Tag','CELL_ISIhistogram','String','ISI-Histogram','FontSize',11,'Enable','off','TooltipString','Show Interspikeinterval-Histogram.','Callback',@ISIhistogramButtonCallback);
+
 
 % "Autocorrelation" - Button
 %uicontrol('Parent',t5,'Units','pixels','Position',[590 66 110 24],'String','Autocorrelation','Tag','CELL_Autocorrelation','FontSize',9,'Enable','off','TooltipString','Autocorrelation Function.','Callback',@correlationButtonCallback);
@@ -802,7 +812,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                 if RAW.MaxVolt==-RAW.MinVolt
                     RAW.BitDepth= double(RAW.BitDepth);
                     %mm=(mm-(2^RAW.BitDepth)/2)*(RAW.MaxVolt*2/2^RAW.BitDepth);
-                    mm = digital2analog_sh(mm,RAW); % rather use function to ensure same ampl. values (MC)
+                    mm = digital2analog_sh(mm,RAW.BitDepth, RAW.MaxVolt, RAW.SignalInversion); % rather use function to ensure same ampl. values (MC)
                     mm(mm<-4000)=0;
                     mm(mm>4000)=0;
                 end
@@ -2056,8 +2066,8 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % insert marks (MC)
         if  get(findobj('Tag','CELL_showSpikesCheckbox','Parent',t5),'value')==1
-            if ~isempty(SPIKEZ)     % display spikes
-                SP = nonzeros(SPIKES(:,Zoom_Electrode));
+            if size(SPIKEZ.TS, 2) > Zoom_Electrode   
+                SP = nonzeros(SPIKEZ.TS(:,Zoom_Electrode));
                 if isempty(SP)==0
                     if spiketraincheck==1
                         y_axis=0.75;
@@ -2380,7 +2390,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         if not(iscell(file)) && not(ischar(file)) % if canceled - dont do anything
             return
         end
-        
+
         % get file extension
         [~,~,ext] = fileparts(file);
         
@@ -2409,8 +2419,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         else
             errordlg('Unknown Fileformat')
         end
-        
-        
+ 
     end
 
 % --- Init Variables before open a file (MC)
@@ -2496,6 +2505,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         if HDmode
             Viewselect = 2;
+            set(findobj(gcf,'Tag','Checkbox_simpleThreshold'),'Value',1,'Enable','off');
         end
         
         % Settings:
@@ -2608,7 +2618,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
             set(findobj(gcf,'Tag','headlines'),'enable','on');
             set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
             
-            
+            onofilter();
             if nr_channel>1
                 set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
             end
@@ -2753,7 +2763,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
     end
 
-% --- Import HDMEA Raw Data (Sh.Kh) ------------------------------------------
+% --- Import 3brain HDMEA Raw Data (Sh.Kh) ------------------------------------------
     function openFileBrw(file,myPath)
         
         % init variables
@@ -2777,84 +2787,12 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         RAW.MinVolt = MinVolt;
         RAW.BitDepth = BitDepth;
         RAW.SignalInversion = SignalInversion;
-        
-        set(0, 'currentfigure', mainWindow);  % set main window as current figure
-        
-        %Settings:
-        uicontrol('Parent',t3,'Units','pixels','Position',[120 62 30 20],'style','edit','HorizontalAlignment','left','Enable','on','FontSize',9,'units','pixels','String','9999','Tag','STD_noisewindow');
-        
-        set(findobj(gcf,'Tag','CELL_dataFile'),'String',file);
-        set(findobj(gcf,'Tag','CELL_dataSaRa'),'String',SaRa);
-        set(findobj(gcf,'Tag','CELL_dataDate'),'String',Date);
-        set(findobj(gcf,'Tag','CELL_dataTime'),'String',Time);
-        set(findobj(gcf,'Tag','CELL_dataDur'),'String',rec_dur_string);
-        delete(findobj(0,'Tag','ShowSpikesBurstsperEL'));
-        delete(findobj(0,'Tag','ShowSpikesBurstsperCell'));
-        
-        if nr_channel>1
-            set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-        end
-        set(findobj(gcf,'Parent',t3,'Enable','off'),'Enable','on');
-        
-        set(findobj(gcf,'Parent',t3,'Tag','CELL_sensitivityBox_pos'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_filterCheckbox'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_ZeroOutCheckbox'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
-        set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_savitzkygolayButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_applyButton'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_scaleBox'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
-        set(findobj(gcf,'Parent',radiogroup2),'Enable','on');
-        set(findobj(gcf,'Parent',radiogroup3),'Enable','on');
-        set(findobj(gcf,'Tag','Manual_threshold'),'Enable','on')
-        set(findobj(gcf,'Tag','time_start'),'Enable','off');
-        set(findobj(gcf,'Tag','time_end'),'Enable','off');
-        set(findobj(gcf,'Parent',t4,'Enable','on'),'Enable','off');
-        set(findobj(gcf,'Parent',t5,'Enable','on'),'Enable','off');
-        set(findobj(gcf,'Parent',t6,'Enable','on'),'Enable','off');
-        set(findobj(gcf,'Parent',t7,'Enable','on'),'Enable','off');
-        set(findobj(gcf,'Parent',t8,'Enable','off'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
-        set(findobj(gcf,'Tag','CELL_exportButton'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_exportAllCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','CELL_showExportCheckbox'),'Enable','off');
-        set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
-        set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
-        set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
-        set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
-        set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'enable','on');
-        set(findobj(gcf,'Tag','headlines'),'enable','on');
-        set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
-        if nr_channel>1
-            set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-        end
-        %Electrode Selection
-        delete(findobj('Tag','S_Elektrodenauswahl'));
-        uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
-        SubmitSorting(1:size(RAW.M,2)) = zeros;
-        preti = (0.5:1000/SaRa:2);
-        postti = (0.5:1000/SaRa:2);
-        delete(findobj('Tag','S_pretime'));
-        delete(findobj('Tag','S_posttime'));
-        uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        
-        
-        %redraw:
-        HDredraw
-        is_open = true;
-        rawcheck = true;
+
+        setSettingsAfterOpenFile() 
+
     end
 
-% --- Import HDF5 Spike Data (Sh.Kh) ------------------------------------------
+% --- Import 3brain HDMEA Spike Data (Sh.Kh) ------------------------------------------
     function openFileBxr(file,myPath)
         
         % init variables
@@ -2891,7 +2829,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         SPIKEZ.neg.TS=TS;
         SPIKEZ.neg.AMP=SPIKEZ.AMP;
         SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-        % old_parameter
+        % old variables used by some old functions:
         temp.M= struct([]);
         SPIKES=temp;
         SPIKES=SPIKEZ.TS; % SPIKES, AMPLITUDES, rec_dur, SaRa, EL_NUMS, optional: fileinfo, Time, Date
@@ -2899,62 +2837,6 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         setSettingsAfterOpenFile()
         
-        %         % Settings:
-        %         set(findobj(gcf,'Parent',t4,'Enable','off'),'Enable','on');
-        %         set(findobj(gcf,'Parent',t3,'Enable','on'),'Enable','off');
-        %         set(findobj(gcf,'Parent',t2,'Enable','on'),'Enable','off');
-        %         set(findobj(gcf,'Parent',t5),'Enable','on');
-        %         set(findobj(gcf,'Parent',t6),'Enable','on');
-        %         set(findobj(gcf,'Parent',t7),'Enable','on');
-        %         set(findobj(gcf,'Tag','Spike_Box'),'value',0,'Enable','off');
-        %         set(findobj(gcf,'Tag','Spike2_Box'),'value',0,'Enable','off');
-        %         set(findobj(gcf,'Tag','CELL_restoreButton'),'Enable','on')
-        %         set(findobj(gcf,'Tag','CELL_ElnullenButton'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_invertButton'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_smoothButton'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_scaleBox'),'value',2,'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_scaleBoxLabel'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_DefaultBox'),'Enable','on');
-        %         set(findobj(gcf,'Parent',radiogroup2),'Enable','off');
-        %         set(findobj(gcf,'Parent',radiogroup3),'Enable','off');
-        %         set(findobj(gcf,'Tag','Manual_threshold'),'Enable','off')
-        %         set(findobj(gcf,'Tag','time_start'),'Enable','off');
-        %         set(findobj(gcf,'Tag','time_end'),'Enable','off');
-        %         set(findobj(gcf,'Tag','CELL_sensitivityBox'),'Enable','off');
-        %         set(findobj(gcf,'Tag','CELL_sensitivityBoxtext'),'Enable','off');
-        %         set(findobj(gcf,'Tag','CELL_Autocorrelation'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','off');
-        %         set(findobj(gcf,'Tag','CELL_showThresholdsCheckbox'),'Enable','off');
-        %         set(findobj(gcf,'Tag','CELL_showSpikesCheckbox'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_showBurstsCheckbox'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Value',0,'Enable','off');
-        %         set(findobj(gcf,'Tag','radio_allinone'),'Value',0,'Enable','off');
-        %         set(findobj(gcf,'Tag','radio_fouralltime'),'Value',0,'Enable','off');
-        %         set(findobj(gcf,'Tag','HDredraw'),'Value',1,'Enable','on');
-        %         set(findobj(gcf,'Tag','VIEWtext'),'Enable','on');
-        %         set(findobj(gcf,'Tag','CELL_exportClearedMButton'),'enable','on');
-        %
-        %         if nr_channel>1
-        %             set(findobj(gcf,'Tag','CELL_Crosscorrelation'),'Enable','on');
-        %         end
-        %
-        %         % Electrode Selection
-        %         delete(findobj('Tag','S_Elektrodenauswahl'));
-        %         uicontrol('Parent',t6,'Units','Pixels','Position',[700 12 50 51],'Tag','S_Elektrodenauswahl','FontSize',8,'String',EL_NAMES,'Enable','off','Value',1,'Style','popupmenu','callback',@recalculate);
-        %         SubmitSorting(1:nr_channel) = zeros;
-        %
-        %         preti = (0.5:1000/SaRa:2);
-        %         postti = (0.5:1000/SaRa:2);
-        %
-        %         delete(findobj('Tag','S_pretime'));
-        %         delete(findobj('Tag','S_posttime'));
-        %         uicontrol('Parent',t6,'Units','Pixels','Position',[700 65 50 30],'Tag','S_pretime','FontSize',8,'String',preti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        %         uicontrol('Parent',t6,'Units','Pixels','Position',[760 65 50 30],'Tag','S_posttime','FontSize',8,'String',postti,'Value',1,'Style','popupmenu','Enable','off','callback',@recalculate);
-        %
-        %
-        %         HDredraw
-        %         is_open = true;
-        %         rawcheck = true;
     end
 
 % --- Open McRack-file (exported into ASCII) (CN)------------------
@@ -3913,73 +3795,80 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
 
 % --- Apply Filter Function (CN)---------------------------------------
     function Applyfilter(source,event) %#ok
-        PREF(12) = get(findobj(gcf,'Tag','CELL_bandstop'),'value');    % bandstop
-        PREF(13) = get(findobj(gcf,'Tag','CELL_bandpass'),'value');     % bandpass
-        PREF(14) = get(findobj(gcf,'Tag','CELL_ZeroOutCheckbox'),'value');           % Zero Out
         
-        if str2double(get(findobj('Tag','CELL_low_edit'),'string')) > str2double(get(findobj('Tag','CELL_high_edit'),'string')) % switch slider values if lower boundary is higher than upper boundary
-            temp = str2double(get(findobj('Tag','CELL_low_edit'),'string'));
-            set(findobj('Tag','CELL_low_edit'),'string',str2double(get(findobj('Tag','CELL_high_edit'),'string')));
-            set(findobj('Tag','CELL_high_edit'),'string',temp);
-            filter_edit;
-        end
-        
-        % save filter parameter to spiketrain:
-        SPIKEZ.FILTER.f_edge=[str2double(get(findobj('Tag','CELL_low_edit'),'string')), str2double(get(findobj('Tag','CELL_high_edit'),'string'))];
-        
-        if (PREF(12) || PREF(13)) && PREF(14)== 0
-            waitbaradd = 0.15;
-        elseif PREF(14) && PREF(12) == 0 && PREF(13) == 0
-            waitbaradd = 0.01275;
-        elseif (PREF(14) && PREF(12) && PREF(13)== 0) || (PREF(14) && PREF(13) && PREF(12) == 0)
-            waitbaradd = 0.012;
-        elseif PREF(12) && PREF(13) && PREF(14)
-            waitbaradd = 0.012;
-        end
-        
-        if PREF(14)
-            ZeroOutcallfunction;
-        else
-            h_wait = waitbar(0,'Please Wait - busy...');
-        end
-        
-        waitbar(1); close(h_wait);
-        waitbar_counter=0;
-        
-        if str2double(get(findobj('Tag','CELL_low_edit'),'string')) == str2double(get(findobj('Tag','CELL_high_edit'),'string')) % use notch filter if upper and lower boundary have the same value
-            notchfilter;
-            SPIKEZ.FILTER.Name='notchfilter';
-        else
-            if PREF(12)
-                f_edge = str2double(get(findobj('Tag','CELL_high_edit'),'string'));
-                lowerBoundary = str2double(get(findobj('Tag','CELL_low_edit'),'string'));
-                flag_waitbar = 1;
-                [RAW,filterName,f_edge] = bandstop(RAW,f_edge,SaRa,HDrawdata,flag_waitbar,stimulidata,lowerBoundary);
-                SPIKEZ.FILTER.Name = filterName;
-                SPIKEZ.FILTER.f_edge = f_edge;
+        if ~isAlreadyFiltered
+    
+            PREF(12) = get(findobj(gcf,'Tag','CELL_bandstop'),'value');    % bandstop
+            PREF(13) = get(findobj(gcf,'Tag','CELL_bandpass'),'value');     % bandpass
+            PREF(14) = get(findobj(gcf,'Tag','CELL_ZeroOutCheckbox'),'value');           % Zero Out
+            
+            if str2double(get(findobj('Tag','CELL_low_edit'),'string')) > str2double(get(findobj('Tag','CELL_high_edit'),'string')) % switch slider values if lower boundary is higher than upper boundary
+                temp = str2double(get(findobj('Tag','CELL_low_edit'),'string'));
+                set(findobj('Tag','CELL_low_edit'),'string',str2double(get(findobj('Tag','CELL_high_edit'),'string')));
+                set(findobj('Tag','CELL_high_edit'),'string',temp);
+                filter_edit;
             end
             
-            if PREF(13)
-                %                RAW.M = bandpass(RAW);
-                bandpass;
-                SPIKEZ.FILTER.Name='bandpass';
+            % save filter parameter to spiketrain:
+            SPIKEZ.FILTER.f_edge=[str2double(get(findobj('Tag','CELL_low_edit'),'string')), str2double(get(findobj('Tag','CELL_high_edit'),'string'))];
+            
+            if (PREF(12) || PREF(13)) && PREF(14)== 0
+                waitbaradd = 0.15;
+            elseif PREF(14) && PREF(12) == 0 && PREF(13) == 0
+                waitbaradd = 0.01275;
+            elseif (PREF(14) && PREF(12) && PREF(13)== 0) || (PREF(14) && PREF(13) && PREF(12) == 0)
+                waitbaradd = 0.012;
+            elseif PREF(12) && PREF(13) && PREF(14)
+                waitbaradd = 0.012;
             end
-        end
+            
+            if PREF(14)
+                ZeroOutcallfunction;
+            else
+                h_wait = waitbar(0,'Please Wait - busy...');
+            end
+            
+            waitbar(1); close(h_wait);
+            waitbar_counter=0;
+            
+            if str2double(get(findobj('Tag','CELL_low_edit'),'string')) == str2double(get(findobj('Tag','CELL_high_edit'),'string')) % use notch filter if upper and lower boundary have the same value
+                notchfilter;
+                SPIKEZ.FILTER.Name='notchfilter';
+            else
+                if PREF(12)
+                    f_edge = str2double(get(findobj('Tag','CELL_high_edit'),'string'));
+                    lowerBoundary = str2double(get(findobj('Tag','CELL_low_edit'),'string'));
+                    flag_waitbar = 1;
+                    [RAW,filterName,f_edge] = bandstop(RAW,f_edge,SaRa,HDrawdata,flag_waitbar,stimulidata,lowerBoundary);
+                    SPIKEZ.FILTER.Name = filterName;
+                    SPIKEZ.FILTER.f_edge = f_edge;
+                end
+                
+                if PREF(13)
+                    %                RAW.M = bandpass(RAW);
+                    bandpass;
+                    SPIKEZ.FILTER.Name='bandpass';
+                end
+            end
+            
+            
+            
+            if stimulidata
+                figure (mainWindow);
+                set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Enable','on');
+                set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','on');
+                set(findobj(gcf,'Tag','CELL_ShowZeroOutExample'),'Enable','on');
+            else
+                BEG = 0;
+                END = 0;
+            end
+            redrawdecide; % shiva%
+            
+            isAlreadyFiltered = true;
         
-        
-        
-        if stimulidata
-            figure (mainWindow);
-            set(findobj(gcf,'Tag','CELL_showStimuliCheckbox'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_showMarksCheckbox'),'Enable','on');
-            set(findobj(gcf,'Tag','CELL_ShowZeroOutExample'),'Enable','on');
         else
-            BEG = 0;
-            END = 0;
+            msgbox('Signals are already filtered!')
         end
-        redrawdecide; % shiva%
-        
-        isAlreadyFiltered = true;
         
     end
 
@@ -4301,8 +4190,9 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         SPIKEZ.neg.flag = tmp(1); % necessary if more than one instance of DrCell is opended (MC)
         tmp = get(findobj(Window,'Tag','posThCheckbox'),'Value');
         SPIKEZ.pos.flag = tmp(1); % same as above
+        flag_simple = get(findobj(Window,'Tag','Checkbox_simpleThreshold'),'Value');
         flag_waitbar=1;
-        [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+        [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar,auto,win_beg,win_end,threshrmsdecide,flag_simple);
         
         % calc SNR
         SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
@@ -4771,7 +4661,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         ISIhist = figure('Position',[150 50 700 660],'Name','ISI-Histogram','NumberTitle','off');
         
         paneltop=uipanel('Parent',ISIhist,'fontweight','b','Units','normalized','Position',[.01 .8 .98 .2]);
-        uicontrol('Parent',paneltop,'style','text','units','normalized','Position', [.1 .5 .7 .3],'FontSize',10, 'HorizontalAlignment','left','String','Shows ISI-histogram of selected electrode. Please select one electrode and press "Apply..."!');
+        uicontrol('Parent',paneltop,'style','text','units','normalized','Position', [.1 .5 .7 .3],'FontSize',10, 'HorizontalAlignment','left','String','Shows ISI-histogram of selected electrode. Enter the number of an electrode or "all" for all electrodes and press "Apply..."!');
         uicontrol('Parent',paneltop,'style','edit','units','normalized','Position', [.1 .1 .3 .2],'HorizontalAlignment','left','FontSize',9,'Tag','CELL_SelectISIhist_electrode','string',num2str(el));
         uicontrol('Parent',paneltop,'Style','PushButton','Units','normalized','Position',[.65 .1 .3 .2],'FontSize',10,'FontWeight','bold','String','Apply...','ToolTipString','Shows ISI-histogram of the selected electrode','CallBack',@ISIhistogramRedraw);
         panelbot = uipanel('Parent',ISIhist,'Units','normalized','Position',[.01 .01 .98 .78]);
@@ -5399,22 +5289,9 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
         % draw bursts
         if get(findobj(gcf,'Tag','checkbox_bursts'),'Value')==1
-            %             R=nr_channel;
-            %             for n=1:nr_channel
-            %                 if ~isempty(nonzeros(BURSTS.BEG(:,n)))
-            %                     Names(n)= EL_NAMES(n);
-            %                 else
-            %                     Names(n)= {['' ]};
-            %                 end
-            %             end
-            %             set(gca,'YDir','reverse', 'ytick', [1.25:1:R+1], 'TickLength',[0 0], 'YTickLabel',Names','YLim',[0 R+1],'FontSize',6);
-            %             xlabel('t /s')
-            %             height=R+1;
-            
             COLOR=[0 1 0.4]; % 0 0.8 0.4
             ROW=1;o=1.5;l=1;
             for n=1:size(SPIKEZ.TS,2)
-                %if ~isempty(nonzeros(BURSTS.BEG(:,n)))
                 if size(BURSTS.BEG,2)>1
                     for k=1:length(nonzeros(BURSTS.BEG(:,n)))
                         line([BURSTS.BEG(k,n) BURSTS.BEG(k,n) BURSTS.END(k,n) BURSTS.END(k,n)],[ o l l o],'Color',COLOR)
@@ -5422,38 +5299,28 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
                 end
                 o=o+ROW;
                 l=l+ROW;
-                %end
             end
-            %              for n=1:size(SPIKES,2)
-            %                  if ~isempty(nonzeros(SPIKES(:,n)))
-            %                      if size(BURSTS.BEG,2)>1
-            %                          for k=1:length(nonzeros(BURSTS.BEG(:,n)))
-            %                              line([BURSTS.BEG(k,n) BURSTS.BEG(k,n) BURSTS.END(k,n) BURSTS.END(k,n)],[ o l l o],'Color',COLOR)
-            %                          end
-            %                      end
-            %                      o=o+ROW;
-            %                      l=l+ROW;
-            %                  end
-            %              end
         end
         
         % draw SBE
         if get(findobj(gcf,'Tag','checkbox_sbe'),'Value')==1
-            for k=1:size(SBE.CORE,1)
-                line([SBE.CORE(k) SBE.CORE(k)],[height 0],'Linestyle','--','Color',[1 0 0])
+            if ~isempty(SBE)
+                for k=1:size(SBE.CORE,1)
+                    line([SBE.CORE(k) SBE.CORE(k)],[height 0],'Linestyle','--','Color',[1 0 0])
+                    if get(findobj(gcf,'Tag','checkbox_show_num'),'Value')==1
+                        text(SBE.CORE(k),0,num2str(SBE.SIB(k)),'FontSize',6)
+                    end
+                end
+                COLOR=[1 0 0]; % 0 0.8 0.4
+                o=0.5;l=0;
+                if size(SBE.BEG,1)>0
+                    for k=1:length(nonzeros(SBE.BEG(:)))
+                        line([SBE.BEG(k) SBE.BEG(k) SBE.END(k) SBE.END(k)],[ o l l o],'Color',COLOR)
+                    end
+                end
                 if get(findobj(gcf,'Tag','checkbox_show_num'),'Value')==1
-                    text(SBE.CORE(k),0,num2str(SBE.SIB(k)),'FontSize',6)
+                    text(T(1,end),2,['#SBE: ' num2str(size(SBE.CORE,1))],'FontSize',10)
                 end
-            end
-            COLOR=[1 0 0]; % 0 0.8 0.4
-            o=0.5;l=0;
-            if size(SBE.BEG,1)>0
-                for k=1:length(nonzeros(SBE.BEG(:)))
-                    line([SBE.BEG(k) SBE.BEG(k) SBE.END(k) SBE.END(k)],[ o l l o],'Color',COLOR)
-                end
-            end
-            if get(findobj(gcf,'Tag','checkbox_show_num'),'Value')==1
-                text(T(1,end),2,['#SBE: ' num2str(size(SBE.CORE,1))],'FontSize',10)
             end
         end
         
@@ -5766,7 +5633,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         GUI_cardioSignalProcessing(RAW,SPIKEZ,GLOB)
     end
 
-% --- Reduce Spikes (MC) --------------------------------
+% --- Delete spike trains with less than a specified mininal firing rate (MC) --------------------------------
     function minFiringRateButtonCallback(~,~)
         
         
@@ -5806,7 +5673,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         
     end
 
-% --- Reduce Spikes (MC) --------------------------------
+% --- Test if spike train is stationary (MC) --------------------------------
     function Stationarity_ButtonCallback(~,~)
         
         dlg_prompt={'Spike trains will be tested for nonstationarity. 1: Delete nonstationary spike trains. 0: Keep all spike trains'};

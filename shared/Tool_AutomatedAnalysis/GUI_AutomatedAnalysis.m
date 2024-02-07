@@ -25,6 +25,9 @@ function GUI_AutomatedAnalysis()
 %
 % written by Manuel Ciba in 2015
 
+clc
+close all
+
 global mainpath temp_filename
 temp_filename='';
 mainpath=[];
@@ -83,16 +86,16 @@ uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01
 uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .6 .3 .1], 'string','Detect positive spikes','Tag','Box_posSpikes','BackgroundColor',GUI_Color_BG)
 
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .5 .25 .1],'String','f edge /Hz:','BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .5 .1 .1],'string','50','Tag','Cell_fedge','BackgroundColor',GUI_Color_BG);
+uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .52 .25 .1],'String','f edge /Hz:','HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .52 .1 .1],'string','50','Tag','Cell_fedge','BackgroundColor',GUI_Color_BG);
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .4 .25 .1],'String','Refractory Time /ms:','BackgroundColor',GUI_Color_BG);
+uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .4 .25 .1],'String','Refractory Time /ms:','HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
 uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .4 .1 .1],'string','0','Tag','Cell_idleTime','BackgroundColor',GUI_Color_BG);
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .8 .25 .1],'String',{'Spikedetection' '(0: DrCell, 1: SWTEO, 2: Cardio, 3: Only save pictures)'},'BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .8 .1 .1], 'string','0','Tag','Cell_spikedetection','BackgroundColor',GUI_Color_BG)
+uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .82 .4 .1],'String',{'Spikedetection' '(0: DrCell, 1: SWTEO, 2: Cardio, 3: Only save pictures)'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .82 .1 .1], 'string','0','Tag','Cell_spikedetection','BackgroundColor',GUI_Color_BG)
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .7 .25 .1],'String',{'Threshold Factor and Basefactor Noise'},'BackgroundColor',GUI_Color_BG);
+uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .7 .25 .1],'String',{'Threshold Factor and Basefactor Noise'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
 uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .7 .1/2 .1], 'string','5','Tag','Cell_thresholdFactor','BackgroundColor',GUI_Color_BG)
 
 %uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .6 .25 .1],'String',{'Threshold Base Noise Factor' '(e.g. 5, Note)'},'BackgroundColor',GUI_Color_BG);
@@ -135,7 +138,7 @@ uicontrol('style','text','parent',hp2_1,'Units','Normalized','Position',[.4 .55 
 uicontrol('style','edit','parent',hp2_1,'Units','Normalized','Position',[.55 .55 .1 .1],'string','6','Tag','Cell2_FR_min','BackgroundColor',GUI_Color_BG);
 uicontrol('style','checkbox','parent',hp2_1,'Units','Normalized','Position',[.55 .4 .1 .1], 'string','neg. Spikes','Tag','Box2_neg','TooltipString','if checked: only use negative spikes. if neg+pos is checked: use positive and negative spikes, if nothing is checked: use current spikes which are defined by the spike detection','Value',0,'BackgroundColor',GUI_Color_BG)
 uicontrol('style','checkbox','parent',hp2_1,'Units','Normalized','Position',[.55 .3 .1 .1], 'string','pos. Spikes','Tag','Box2_pos','TooltipString','if checked: only use positive spikes. if neg+pos is checked: use positive and negative spikes, if nothing is checked: use current spikes which are defined by the spike detection','BackgroundColor',GUI_Color_BG)
-uicontrol('style','checkbox','parent',hp2_1,'Units','Normalized','Position',[.55 .2 .1 .1], 'string','60HDMEA','Tag','Box2_60HDMEA','TooltipString','if checked: use 60HDMEA layout instead of 8x8 layout for cardio velocity calculation.','BackgroundColor',GUI_Color_BG)
+uicontrol('style','checkbox','parent',hp2_1,'Units','Normalized','Position',[.55 .2 .1 .1], 'string','60HDMEA','Tag','Box2_60HDMEA','TooltipString','if checked: use MCS-60-electrode-HDMEA layout instead of 8x8 layout for cardio velocity calculation.','BackgroundColor',GUI_Color_BG)
 %uicontrol('style','checkbox','parent',hp2_1,'Units','Normalized','Position',[.81 .85 .2 .1], 'string','Investigate bin/win-size','Tag','Box2_investigate')
 
 % Feature Selection

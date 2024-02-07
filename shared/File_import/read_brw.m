@@ -79,8 +79,13 @@ EL_NUMS=Ch(3,:);
 EL_NAMES=ss;
 Date=0;
 Time=0;
-fileinfo='';
+fileinfo={''};
 nr_channel=NCh;
+
+% Transform raw values from digital sample value (uint) to analog signal in
+% µV (double). Note: Do this step later if better memory performance is
+% required.
+[M] = digital2analog_sh(M, BitDepth, MaxVolt, SignalInversion); 
 
 
 if flag_waitbar

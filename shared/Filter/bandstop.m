@@ -69,11 +69,11 @@ else
         if flag_waitbar; waitbar(((floor(numel(MM(1,:))/j)-1)*j)/i,h_wait); end
         
         if HDrawdata == 1
-            m=digital2analog_sh(MM(:,i+1:i+j),RAW);
+            m=digital2analog_sh(MM(:,i+1:i+j),RAW.BitDepth, RAW.MaxVolt, RAW.SignalInversion);
             m(m<-4000)=0;
             m(m>4000)=0;
             m=(filter(Hd,m));
-            m=RAW.SignalInversion*(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
+            %m=RAW.SignalInversion*(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
             MM(:,i+1:i+j)=m;
         else %for .mat Data mit  El > 60
             m = MM(:,i+1:i+j);
@@ -90,7 +90,7 @@ else
             m(m<-4000)=0;
             m(m>4000)=0;
             m=(filter(Hd,m));
-            m=(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
+            %m=(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
             MM(:,i+1:size(MM,2))=m;
         else %for .mat Data mit  El > 60
             m=(MM(:,i+1:size(MM,2)));

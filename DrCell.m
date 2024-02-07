@@ -20,6 +20,98 @@
 
 %The GNU General Public License can be found at http://www.gnu.org/licenses/
 
+
+
+function DrCell() 
+
+close all;
+clear all;
+clc
+
+DrCellVersion = '20240207';
+
+disp (['--- Dr.Cell ' DrCellVersion ' ---']);
+
+global Window
+global GUI_Color_BG GUI_Color_NeuroButton GUI_Color_CardioButton
+
+% --- Set GUI Color ---
+GUI_Color_BG = [1 1 1]; % white 
+GUI_Color_NeuroButton = ([0 204 187]+50)/255; % green
+GUI_Color_CardioButton = ([89 189 207]+40)/255; % blue
+set(0,'DefaultUicontrolBackgroundColor',GUI_Color_BG);
+set(0,'DefaultFigureColor',GUI_Color_BG);
+
+% ---------------------------------------------------------------------
+% --- GUI -------------------------------------------------------------
+% ---------------------------------------------------------------------
+
+% Window
+set(0,'units','pixels')  
+screenSize = get(0,'screensize'); %Obtains this pixel information
+Window = figure('Position',[800 screenSize(4)/2 400 100],'Tag','Dr.CELL','Name',['Dr.Cell ' DrCellVersion],'NumberTitle','off','Toolbar','none','Resize','off','Color',GUI_Color_BG);
+
+% Buttons:
+% "Neuro" - Button
+uicontrol('Units','pixels','Position',[8 66 180 24],'Tag','CELL_openFileButton','String','NEURO','FontSize',8,'fontweight', 'bold','TooltipString','Open Neuro-Modul to analyse neuronal signals.','BackgroundColor',GUI_Color_NeuroButton,'Callback',@NeuroButtonCallback);
+
+% Buttons:
+% "Cardio" - Button
+uicontrol('Units','pixels','Position',[200 66 180 24],'Tag','CELL_openFileButton','String','CARDIO','FontSize',8,'fontweight', 'bold','TooltipString','Open Cardio-Modul to analyse cardio-signals.','BackgroundColor',GUI_Color_CardioButton,'Callback',@CardioButtonCallback);
+
+
+setPaths % include all needed files into MATLAB search path
+
+
+
+
+% DrCell logo
+panax2 = axes('Parent', Window, 'Units','normalized', 'Position', [0.25 0 0.5 0.5]);
+[img] = imread('biomems.tif');
+imshow(img,'Parent',panax2,'InitialMagnification','fit');
+
+%% Functions
+%----------------------------------------------------------------------
+    function NeuroButtonCallback(~,~) % MC
+       close(Window)
+       if exist('Neuro.m','file')
+            Neuro % open Neuro.m
+       else
+            errordlg('Neuro.m is not in path (Set Path -> Add with Subfolders... -> select DrCell-Folder)')
+       end
+    end
+
+    function CardioButtonCallback(~,~) % MC
+       close(Window)
+       if exist('Cardio.m','file')
+            Cardio % open Cardio.m
+       else
+           errordlg('Cardio.m is not in path (Set Path -> Add with Subfolders... -> select DrCell-Folder)')
+       end
+    end
+
+    function setPaths(~,~) % MC
+        % remove old DrCell/Neuro/Cardio folder from search path
+        PathCell = textscan(path, '%s', 'Delimiter', pathsep);
+        PathCell = PathCell{1,1}; % unpack cell (as textscan was used)
+        for i=1:size(PathCell,1)
+            if any(strfind(PathCell{i},'DrCell')) % remove all entries that contain string "DrCell"
+              rmpath(PathCell{i});
+            end
+        end
+        
+        % Add all DrCell folder to matlab search path
+        path_full = mfilename('fullpath'); % get path of this m-file (.../path/DrCell.m)
+        [path_drcell,~] = fileparts(path_full); % separate path and m-file-name
+        
+        p=genpath(path_drcell); % get path of all subfolders        
+        addpath(p); % add to matlab search path
+        
+    end
+end
+
+
+
 %% ------------- ToDo ------------------------------------------------------
 %               - Cardio: Zoom-Button3, error if no spike detection has
 %               been conducted yet (MC)
@@ -37,6 +129,9 @@
 %               view, the buttons (zoom, invert ect.) of the 4th plot are still visible (MC)
 
 %% ------------- Update History --------------------------------------------
+% see Github for an up to date update history:
+% https://github.com/biomemsLAB/DrCell
+%
 % Date          Description             (Signature)                        
 % 24.06.2014:   - Show Spikes&Bursts in zoom window (MC)
 %               - Excel-export: Amplitudes, SIB for every burst (MC)
@@ -253,93 +348,3 @@
 % 29.04.2022    - Add textfield to GUI_AutomatedAnalysis to enter basenoise factor for threshold calculation (MC)
 % 19.05.2022    - Add support for old _TS.mat files ("sixwell-error") (MC)
 %
-% see Github for an up to date change log:
-% https://github.com/biomemsLAB/DrCell
-
-function DrCell() 
-
-close all;
-clear all;
-clc
-
-DrCellVersion = '20240126';
-
-disp (['--- Dr.Cell ' DrCellVersion ' ---']);
-
-global Window
-global GUI_Color_BG GUI_Color_NeuroButton GUI_Color_CardioButton
-
-% --- Set GUI Color ---
-GUI_Color_BG = [1 1 1]; % white 
-GUI_Color_NeuroButton = ([0 204 187]+50)/255; % green
-GUI_Color_CardioButton = ([89 189 207]+40)/255; % blue
-set(0,'DefaultUicontrolBackgroundColor',GUI_Color_BG);
-set(0,'DefaultFigureColor',GUI_Color_BG);
-
-% ---------------------------------------------------------------------
-% --- GUI -------------------------------------------------------------
-% ---------------------------------------------------------------------
-
-% Window
-set(0,'units','pixels')  
-screenSize = get(0,'screensize'); %Obtains this pixel information
-Window = figure('Position',[800 screenSize(4)/2 400 100],'Tag','Dr.CELL','Name',['Dr.Cell ' DrCellVersion],'NumberTitle','off','Toolbar','none','Resize','off','Color',GUI_Color_BG);
-
-% Buttons:
-% "Neuro" - Button
-uicontrol('Units','pixels','Position',[8 66 180 24],'Tag','CELL_openFileButton','String','NEURO','FontSize',8,'fontweight', 'bold','TooltipString','Open Neuro-Modul to analyse neuronal signals.','BackgroundColor',GUI_Color_NeuroButton,'Callback',@NeuroButtonCallback);
-
-% Buttons:
-% "Cardio" - Button
-uicontrol('Units','pixels','Position',[200 66 180 24],'Tag','CELL_openFileButton','String','CARDIO','FontSize',8,'fontweight', 'bold','TooltipString','Open Cardio-Modul to analyse cardio-signals.','BackgroundColor',GUI_Color_CardioButton,'Callback',@CardioButtonCallback);
-
-
-setPaths % include all needed files into MATLAB search path
-
-
-
-
-% DrCell logo
-panax2 = axes('Parent', Window, 'Units','normalized', 'Position', [0.25 0 0.5 0.5]);
-[img] = imread('biomems.tif');
-imshow(img,'Parent',panax2,'InitialMagnification','fit');
-
-%% Functions
-%----------------------------------------------------------------------
-    function NeuroButtonCallback(~,~) % MC
-       close(Window)
-       if exist('Neuro.m','file')
-            Neuro % open Neuro.m
-       else
-            errordlg('Neuro.m is not in path (Set Path -> Add with Subfolders... -> select DrCell-Folder)')
-       end
-    end
-
-    function CardioButtonCallback(~,~) % MC
-       close(Window)
-       if exist('Cardio.m','file')
-            Cardio % open Cardio.m
-       else
-           errordlg('Cardio.m is not in path (Set Path -> Add with Subfolders... -> select DrCell-Folder)')
-       end
-    end
-
-    function setPaths(~,~) % MC
-        % remove old DrCell/Neuro/Cardio folder from search path
-        PathCell = textscan(path, '%s', 'Delimiter', pathsep);
-        PathCell = PathCell{1,1}; % unpack cell (as textscan was used)
-        for i=1:size(PathCell,1)
-            if any(strfind(PathCell{i},'DrCell')) % remove all entries that contain string "DrCell"
-              rmpath(PathCell{i});
-            end
-        end
-        
-        % Add all DrCell folder to matlab search path
-        path_full = mfilename('fullpath'); % get path of this m-file (.../path/DrCell.m)
-        [path_drcell,~] = fileparts(path_full); % separate path and m-file-name
-        
-        p=genpath(path_drcell); % get path of all subfolders        
-        addpath(p); % add to matlab search path
-        
-    end
-end

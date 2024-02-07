@@ -1,14 +1,29 @@
-function [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW, SPIKEZ, Multiplier_neg, Multiplier_pos, Std_noisewindow, Size_noisewindow, HDrawdata,flag_waitbar, auto,win_beg, win_end, threshrmsdecide)
-
-flag_simple = 0;  % MC: if 0: use old DrCell logic, if 1: use simple threshold calculation
+function [THRESHOLDS,THRESHOLDS_pos,ELEC_CHECK,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW, SPIKEZ, Multiplier_neg, Multiplier_pos, Std_noisewindow, Size_noisewindow, HDrawdata, flag_waitbar, auto, win_beg, win_end, threshrmsdecide, flag_simple)
 
 % default values
-if nargin <= 8
-    auto=1;
-    win_beg=NaN;
-    win_end=NaN;
-    threshrmsdecide=1;
+if nargin < 13
+    flag_simple = 0; % use non-simple treshold method (original method of DrCell 1)
 end
+if nargin < 12
+    threshrmsdecide = 1;  % use rms, not std, to calcuate threshold
+end
+if nargin < 11
+    win_end = NaN;  % manual window definition: only relevant if auto = false
+end
+if nargin < 10
+    win_beg = NaN; % manual window definition: only relevant if auto = false
+end
+if nargin < 9
+    auto = true;  % use automatic window search in order to find a spike free noise region
+end
+if nargin < 8
+    flag_waitbar = 0;
+end
+
+if HDrawdata
+    flag_simple = 1; % if HDMEA, always use simple threshold calculation
+end
+
 
 % Init
 SPIKEZ.neg.THRESHOLDS.Th=zeros(size(RAW.M,2));
@@ -58,7 +73,7 @@ if ~flag_simple
 if auto
     for n=1:size(RAW.M,2)
         if  HDrawdata==1 %Sh_Kh for .brw Data
-            m = digital2analog_sh(RAW.M(:,n),RAW);
+            m = digital2analog_sh(RAW.M(:,n), RAW.BitDepth, RAW.MaxVolt, RAW.SignalInversion);
         else
             m=RAW.M;
         end
