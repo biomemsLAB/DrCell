@@ -7063,7 +7063,7 @@ uicontrol('Parent',bottomPanel_zwei,'Units','pixels','Position',[1105 60 45 20],
         plotConnectivity(CM,EL_NAMES,flag_isMeaLayout)
         
         % calculate graph theory mesures (e.g. cluster coefficient)
-        if 1
+        if 0
             flag_binary=0; % use weighted matrix (not binary, better performance, see Master thesis of Nahid Nafez)
             graphMeasures=getAllGraphParameter(CM,flag_binary) % calculate and output the graph measures
         end
