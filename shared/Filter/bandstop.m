@@ -23,6 +23,11 @@ if flag_waitbar; h_wait = waitbar(0,'Filtering'); end
 MM=RAW.M;
 filterName = 'HP_cheby2_order3_ripple20';
 
+% init filter 
+a = 0;
+b = 0;
+Hd = 0;
+
 if lowerBoundary== 0 % in case that lower boundary equals zero use highpass instead of bandstop
     % check if Signal Processing Toolbox is installed:
     v = ver;
@@ -36,6 +41,8 @@ if lowerBoundary== 0 % in case that lower boundary equals zero use highpass inst
     else % if not, load filter parameter for the case Highpass 50 Hz
         disp('Signal Processing Toolbox is not installed. 50 Hz highpass filtering is applied')
         tmp=load('filterParameter_HP_50Hz.mat'); % tmp.a tmp.b is loaded
+        a = tmp.a;
+        b = tmp.b;
     end
 else
     [z,p,k] = cheby2(3,20,[str2double(get(findobj('Tag','CELL_low_edit'),'string'))*2/SaRa str2double(get(findobj('Tag','CELL_high_edit'),'string'))*2/SaRa],'stop');
@@ -45,11 +52,12 @@ end
 
 % if less than 1000 electrodes apply filter directly
 if HDrawdata == 0 || size(MM,2)<=1000    
-    if any(strcmp('Signal Processing Toolbox', {v.Name})) % (MC)
-        MM = filter(Hd,MM);
-    else
-        MM=filter(tmp.b,tmp.a,MM);
-    end
+    m = filter_custom(m, Hd, a, b);
+    %if any(strcmp('Signal Processing Toolbox', {v.Name})) % (MC)
+    %    MM = filter(Hd,MM);
+    %else
+    %    MM=filter(tmp.b,tmp.a,MM);
+    %end
     
 else
     % if MATLAB runs on windows, the function "memory" is available
@@ -72,12 +80,14 @@ else
             m=digital2analog_sh(MM(:,i+1:i+j),RAW.BitDepth, RAW.MaxVolt, RAW.SignalInversion);
             m(m<-4000)=0;
             m(m>4000)=0;
-            m=(filter(Hd,m));
+            %m=(filter(Hd,m));
+            m = filter_custom(m, Hd, a, b);
             %m=RAW.SignalInversion*(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
             MM(:,i+1:i+j)=m;
         else %for .mat Data mit  El > 60
             m = MM(:,i+1:i+j);
-            m = filter(Hd,m);
+            %m = filter(Hd,m);
+            m = filter_custom(m, Hd, a, b);
             MM(:,i+1:i+j) = single(m);
         end
     end
@@ -89,12 +99,14 @@ else
             m=digital2analog_sh(m,RAW);
             m(m<-4000)=0;
             m(m>4000)=0;
-            m=(filter(Hd,m));
+            %m=(filter(Hd,m));
+            m = filter_custom(m, Hd, a, b);
             %m=(m/(RAW.MaxVolt*2/2^RAW.BitDepth))+((2^RAW.BitDepth)/2); % %convert analog values to digital sample Values
             MM(:,i+1:size(MM,2))=m;
         else %for .mat Data mit  El > 60
             m=(MM(:,i+1:size(MM,2)));
-            m = filter(Hd,m);
+            %m = filter(Hd,m);
+            m = filter_custom(m, Hd, a, b);
             MM(:,i+1:size(MM,2))=m;
         end
     end
@@ -108,4 +120,13 @@ end
 RAW.M=MM;
 
 if flag_waitbar; waitbar(1, h_wait); close(h_wait); end
+end
+
+function M = filter_custom(M, Hd, a, b)
+    v = ver;
+    if any(strcmp('Signal Processing Toolbox', {v.Name})) % (MC)
+        M = filter(Hd,M);
+    else
+        M = filter(b,a,M);
+    end
 end
