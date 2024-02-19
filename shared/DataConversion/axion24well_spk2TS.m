@@ -34,7 +34,7 @@ function axion24well_spk2TS(file_path)
     end
 
     % unpack metadata to DrCell variables
-    rec_dur = metadata.Duration/100;  % convert to seconds -> /100
+    rec_dur = metadata.Duration;
     SaRa = metadata.SamplingFrequency;
     nr_channel = 16;
     fileinfo = metadata.Description;
@@ -55,7 +55,7 @@ function axion24well_spk2TS(file_path)
                     idx_el = idx_el + 1;
                     if ~isempty(Data{i,j,k,l})
                         time_stamps = [Data{i,j,k,l}(:).Start];
-                        TS(1:length(time_stamps), idx_el) = time_stamps/100;  % convert to seconds -> /100
+                        TS(1:length(time_stamps), idx_el) = time_stamps;
                         % get amplitudes for each spike from spike wave
                         % form (assumption: extreme value is spike)
                         for idx_spike = 1:size(time_stamps, 2)
