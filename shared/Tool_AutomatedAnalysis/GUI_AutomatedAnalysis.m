@@ -80,30 +80,45 @@ uicontrol('style','edit','parent',hp1_1,'Units','Normalized','Position',[.6 .85 
 
 % Panel1_2 - Options:
 hp1_2 = uipanel('Parent',tab1,'Title','Options','Position',[.05 .05 .95 .5],'BackgroundColor',GUI_Color_BG);
-% Options:
-uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .8 .3 .1], 'string','Six-well MEA mode','Tag','Box_sixwell','BackgroundColor',GUI_Color_BG)
-uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .7 .3 .1], 'string','Detect negative spikes','Tag','Box_negSpikes','value',1,'BackgroundColor',GUI_Color_BG)
-uicontrol('style','checkbox','parent',hp1_2,'Units','Normalized','Position',[.01 .6 .3 .1], 'string','Detect positive spikes','Tag','Box_posSpikes','BackgroundColor',GUI_Color_BG)
+
+% Subpanel: Filter
+hp1_21 = uipanel('Parent',hp1_2,'Title','Filter','Position',[0 0 1/3 1],'BackgroundColor',GUI_Color_BG);
+
+uicontrol('style','text','parent',hp1_21,'Units','Normalized','Position',[.12 .85 .6 .1],'String','Highpass edge frequency /Hz','HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_21,'Units','Normalized','Position',[.01 .85 .1 .1],'string','50','Tag','Cell_fedge','BackgroundColor',GUI_Color_BG);
 
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .52 .25 .1],'String','f edge /Hz:','HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .52 .1 .1],'string','50','Tag','Cell_fedge','BackgroundColor',GUI_Color_BG);
+% Subpanel: Threshold
+hp1_22 = uipanel('Parent',hp1_2,'Title','Threshold','Position',[1/3 0 1/3 1],'BackgroundColor',GUI_Color_BG);
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .4 .25 .1],'String','Refractory Time /ms:','HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .4 .1 .1],'string','0','Tag','Cell_idleTime','BackgroundColor',GUI_Color_BG);
+uicontrol('style','text','parent',hp1_22,'Units','Normalized','Position',[.12 .85 .6 .1],'String',{'Threshold factor'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_22,'Units','Normalized','Position',[.01 .85 .1 .1], 'string','5','Tag','Cell_thresholdFactor','BackgroundColor',GUI_Color_BG)
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .82 .4 .1],'String',{'Spikedetection' '(0: DrCell, 1: SWTEO, 2: Cardio, 3: Only save pictures)'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .82 .1 .1], 'string','0','Tag','Cell_spikedetection','BackgroundColor',GUI_Color_BG)
+uicontrol('style','text','parent',hp1_22,'Units','Normalized','Position',[.12 .7 .6 .1],'String',{'Base noise factor'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_22,'Units','Normalized','Position',[.01 .7 .1 .1], 'string','5','Tag','Cell_baseFactor','BackgroundColor',GUI_Color_BG)
 
-uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.42 .7 .25 .1],'String',{'Threshold Factor and Basefactor Noise'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31 .7 .1/2 .1], 'string','5','Tag','Cell_thresholdFactor','BackgroundColor',GUI_Color_BG)
+uicontrol('style','checkbox','parent',hp1_22,'Units','Normalized','Position',[.01 .5 .6 .1], 'string','Simple threshold','Tag','Box_simpleThreshold', 'value', 1,'BackgroundColor',GUI_Color_BG)
 
-%uicontrol('style','text','parent',hp1_2,'Units','Normalized','Position',[.4 .6 .25 .1],'String',{'Threshold Base Noise Factor' '(e.g. 5, Note)'},'BackgroundColor',GUI_Color_BG);
-uicontrol('style','edit','parent',hp1_2,'Units','Normalized','Position',[.31+.1/2 .7 .1/2 .1], 'string','5','Tag','Cell_baseFactor','BackgroundColor',GUI_Color_BG)
+
+% Subpanel: Spikedetection
+hp1_23 = uipanel('Parent',hp1_2,'Title','Spikedetection','Position',[2/3 0 1/3 1],'BackgroundColor',GUI_Color_BG);
+
+uicontrol('style','text','parent',hp1_23,'Units','Normalized','Position',[.12 .85 1 .1],'String',{'(0: DrCell, 1: SWTEO,' '2: Cardio, 3: Only save pictures)'},'HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_23,'Units','Normalized','Position',[.01 .85 .1 .1], 'string','0','Tag','Cell_spikedetection','BackgroundColor',GUI_Color_BG)
+
+uicontrol('style','text','parent',hp1_23,'Units','Normalized','Position',[.12 .7 .9 .1],'String','Refractory Time /ms','HorizontalAlignment','left','BackgroundColor',GUI_Color_BG);
+uicontrol('style','edit','parent',hp1_23,'Units','Normalized','Position',[.01 .7 .1 .1],'string','0','Tag','Cell_idleTime','BackgroundColor',GUI_Color_BG);
+
+
+uicontrol('style','checkbox','parent',hp1_23,'Units','Normalized','Position',[.01 .6 .6 .1], 'string','Six-well MEA mode','Tag','Box_sixwell','BackgroundColor',GUI_Color_BG)
+uicontrol('style','checkbox','parent',hp1_23,'Units','Normalized','Position',[.01 .5 .6 .1], 'string','Detect negative spikes','Tag','Box_negSpikes','value',1,'BackgroundColor',GUI_Color_BG)
+uicontrol('style','checkbox','parent',hp1_23,'Units','Normalized','Position',[.01 .4 .6 .1], 'string','Detect positive spikes','Tag','Box_posSpikes','BackgroundColor',GUI_Color_BG)
+
+
 
 
 % "Start Spikedetection"
-uicontrol('Units','Normalized','parent',hp1_2,'Position',[.5 .1 .3 .2],'String','Start Spikedetection','FontSize',15,'fontweight', 'bold','TooltipString','Start spikedetection for all selected files','BackgroundColor',GUI_Color_BigButton,'Callback',@StartSpikedetection_ButtonCallback);
+uicontrol('Units','Normalized','parent',hp1_23,'Position',[.1 .1 .8 .2],'String','Start Spikedetection','FontSize',15,'fontweight', 'bold','TooltipString','Start spikedetection for all selected files','BackgroundColor',GUI_Color_BigButton,'Callback',@StartSpikedetection_ButtonCallback);
 
 % DrCell Logo
 panax2 = axes('Parent', hp1_2, 'Units','normalized', 'Position', [0.025 0.05 0.15 0.15]);
@@ -413,9 +428,10 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         SPIKEZ.PREF.sixwell = get(findobj(gcf,'Tag','Box_sixwell'),'value');
         PREF.subfolder = get(findobj(gcf,'Tag','Box_subfolder'),'value');
         flag_spikedetection = str2num(get(findobj(gcf,'Tag','Cell_spikedetection'),'string')); % 0: DrCell, 1: FLieb, 2: Cardio, 3: only save pic of raw data
-        PREF.root_path=get(findobj(gcf,'Tag','Cell1_RootPath'),'string');
-        PREF.thresholdFactor=str2num(get(findobj(gcf,'Tag','Cell_thresholdFactor'),'string'));
-        PREF.baseFactor=str2num(get(findobj(gcf,'Tag','Cell_baseFactor'),'string'));
+        PREF.root_path = get(findobj(gcf,'Tag','Cell1_RootPath'),'string');
+        PREF.thresholdFactor = str2num(get(findobj(gcf,'Tag','Cell_thresholdFactor'),'string'));
+        PREF.baseFactor = str2num(get(findobj(gcf,'Tag','Cell_baseFactor'),'string'));
+        PREF.flag_simpleThreshold = get(findobj(gcf,'Tag','Box_simpleThreshold'),'value'); 
         
         % Start logging the command window text
         cd(PREF.root_path)
@@ -473,6 +489,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         thresholdFactor = PREF.thresholdFactor;
         baseFactor = PREF.baseFactor;
         root_path = PREF.root_path;
+        flag_simpleThreshold = PREF.flag_simpleThreshold;
         
         
         for iii=1:size(fullpath_raw,1)
@@ -519,7 +536,11 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 if ~HDrawdata; Std_noisewindow=baseFactor; else; Std_noisewindow=9999; end
                 Size_noisewindow=0.05; % 50 ms
                 HDrawdata = strcmp(e_raw,'.brw');
-                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+                auto = true;  % use automatic window search in order to find a spike free noise region
+                win_beg = NaN; % manual window definition: only relevant if auto = false
+                win_end = NaN;  % manual window definition: only relevant if auto = false
+                threshrmsdecide = 1;  % use rms, not std, to calcuate threshold
+                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar,auto,win_beg,win_end,threshrmsdecide,flag_simpleThreshold); 
                 % calc SNR
                 SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
                 SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
@@ -536,7 +557,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 SPIKEZ=spikedetection(RAW,SPIKEZ);
                 [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
                 SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-                SPIKEZ=calc_snr(RAW,SPIKEZ);
+                SPIKEZ=calc_snr(RAW,SPIKEZ,flag_simpleThreshold);
                 SaveSpikes(SPIKEZ,f_raw,path_savelocation_TS)
                 if ~HDrawdata; savePlot(RAW,SPIKEZ,f_raw, path_savelocation_Pics); end
             end
@@ -556,7 +577,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                     SPIKEZ=spikedetection(RAW_ch,SPIKEZ);
                     
                     SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-                    SPIKEZ=calc_snr(RAW_ch,SPIKEZ);
+                    SPIKEZ=calc_snr(RAW_ch,SPIKEZ,flag_simpleThreshold);
                     SaveSpikes(SPIKEZ,[f_raw '_ch' num2str(chamber)],path_savelocation_TS)
                     savePlot(RAW_ch,SPIKEZ,[f_raw '_ch' num2str(chamber)],path_savelocation_Pics)
                     disp([f_raw '_ch' num2str(chamber)])
@@ -573,6 +594,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         thresholdFactor = PREF.thresholdFactor;
         baseFactor = PREF.baseFactor;
         root_path = PREF.root_path;
+        flag_simpleThreshold = PREF.flag_simpleThreshold;
         
         for iii=1:size(fullpath_raw,1)
             
@@ -621,7 +643,12 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 if ~HDrawdata; Std_noisewindow=baseFactor; else; Std_noisewindow=9999; end
                 Size_noisewindow=0.05; % 50 ms
                 HDrawdata = strcmp(e_raw,'.brw');
-                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+                auto = true;  % use automatic window search in order to find a spike free noise region
+                win_beg = NaN; % manual window definition: only relevant if auto = false
+                win_end = NaN;  % manual window definition: only relevant if auto = false
+                threshrmsdecide = 1;  % use rms, not std, to calcuate threshold
+                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar,auto,win_beg,win_end,threshrmsdecide,flag_simpleThreshold); 
+                
                 % calc SNR
                 SPIKEZ=calc_snr_fast(SPIKEZ, COL_RMS, COL_SDT);
                 SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
@@ -636,7 +663,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 [SPIKEZ]=combinedSpikeDetection(RAW,SPIKEZ); % spikedetection according to Lieb et al. (2017) ("SWTEO")
                 [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW,SPIKEZ);
                 SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-                SPIKEZ=calc_snr(RAW,SPIKEZ);
+                SPIKEZ=calc_snr(RAW,SPIKEZ,flag_simpleThreshold);
                 SaveSpikes(SPIKEZ,f_raw, path_savelocation_TS)
                 if ~HDrawdata; savePlot(RAW,SPIKEZ,f_raw, path_savelocation_Pics); end
                 disp(f_raw)
@@ -657,7 +684,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                     [SPIKEZ]=combinedSpikeDetection(RAW_ch,SPIKEZ); % spikedetection according to Lieb et al. (2017) ("SWTEO")
                     [SPIKEZ]=applyRefractoryAndGetAmplitudes(RAW_ch,SPIKEZ);
                     SPIKEZ=SpikeFeaturesCalculation(SPIKEZ);
-                    SPIKEZ=calc_snr(RAW_ch,SPIKEZ);
+                    SPIKEZ=calc_snr(RAW_ch,SPIKEZ,flag_simpleThreshold);
                     SaveSpikes(SPIKEZ,[f_raw '_ch' num2str(chamber)], path_savelocation_TS)
                     if ~HDrawdata; savePlot(RAW_ch,SPIKEZ,[f_raw '_ch' num2str(chamber)], path_savelocation_Pics); end
                 end
@@ -673,6 +700,7 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
         thresholdFactor = PREF.thresholdFactor;
         baseFactor = PREF.baseFactor;
         root_path = PREF.root_path;
+        flag_simpleThreshold = PREF.flag_simpleThreshold;
         
         for iii=1:size(fullpath_raw,1)
             [p_raw,f_raw,e_raw]=fileparts(fullpath_raw{iii}); % path, filename, extension
@@ -718,7 +746,11 @@ axes('Parent',hp4_2,'Units','Normalized','Position',[.1 .2 0.8 .7],'Tag','axes_t
                 if ~HDrawdata; Std_noisewindow=baseFactor; else; Std_noisewindow=9999; end
                 Size_noisewindow=0.05; % 50 ms
                 HDrawdata = strcmp(e_raw,'.brw');
-                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar); % using default values of: flag_waitbar,auto,win_beg,win_end,threshrmsdecide);
+                auto = true;  % use automatic window search in order to find a spike free noise region
+                win_beg = NaN; % manual window definition: only relevant if auto = false
+                win_end = NaN;  % manual window definition: only relevant if auto = false
+                threshrmsdecide = 1;  % use rms, not std, to calcuate threshold
+                [~,~,~,SPIKEZ,COL_RMS,COL_SDT]=calculateThreshold(RAW,SPIKEZ,Multiplier_neg,Multiplier_pos,Std_noisewindow,Size_noisewindow,HDrawdata,flag_waitbar,auto,win_beg,win_end,threshrmsdecide,flag_simpleThreshold); 
                 SPIKEZ.PREF.CLEL = zeros(size(RAW.M,2),1);
                 SPIKEZ.PREF.Invert_M = zeros(size(RAW.M,2),1);
             end

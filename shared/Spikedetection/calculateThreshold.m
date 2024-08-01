@@ -20,9 +20,9 @@ if nargin < 8
     flag_waitbar = 0;
 end
 
-if HDrawdata
-    flag_simple = 1; % if HDMEA, always use simple threshold calculation
-end
+%if HDrawdata
+%    flag_simple = 1; % if HDMEA, always use simple threshold calculation
+%end
 
 
 % Init

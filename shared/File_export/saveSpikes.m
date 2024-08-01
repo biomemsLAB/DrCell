@@ -1,4 +1,4 @@
-function saveSpikes(fileFullPath, SPIKEZ) % filename, SPIKEZ (=Structure)
+function saveSpikes(fileFullPath, SPIKEZ) 
         temp.SPIKEZ=SPIKEZ;
-        save(fileFullPath, 'temp')
+        save(fileFullPath, 'temp', '-v7.3')
 end
