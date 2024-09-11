@@ -14,6 +14,14 @@
 
 function SPIKEZ = createStructure_SPIKEZ(TS,AMP,SaRa,rec_dur,fileinfo,nr_channel,Time,Date,EL_NAMES,EL_NUMS)
 
+    % force correct format
+    if ~iscell(fileinfo)
+        fileinfo = {fileinfo};
+    end
+    %if ~iscell(Date)
+    %    Date = {Date};
+    %end
+
     SPIKEZ.TS=TS;
     
     for n=1:size(SPIKEZ.TS,2)
