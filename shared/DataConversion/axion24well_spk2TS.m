@@ -39,7 +39,7 @@ function axion24well_spk2TS(file_path)
     nr_channel = 16;
     fileinfo = metadata.Description;
     d = metadata.BlockVectorStartTime;
-    Time = [num2str(d.Hour,'%02d') ':' num2str(d.Minute,'%02d') ':' num2str(d.Second,'%02d')];
+    Time = [num2str(d.Hour,'%02d') num2str(d.Minute,'%02d') num2str(d.Second,'%02d')];
     Date = [num2str(d.Year) num2str(d.Month,'%02d') num2str(d.Day,'%02d')];
     EL_NAMES = {'11','12','13','14','21','22','23','24','31','32','33','34','41','42','43','44'};
     EL_NUMS = [11 12 13 14 21 22 23 24 31 32 33 34 41 42 43 44]; 
