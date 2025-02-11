@@ -57,7 +57,10 @@ elseif strcmp(ext,'.bxr') % if .bxr (3brain Spike File) file is selected
 elseif strcmp(ext,'.h5') % if .h5 (Multichannel systems format, converted from .mcd to .h5 using "Multichannel Data Manager" (available online)
     [Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel] = read_MCS_hd5_RAW(filepath, flag_waitbar);
     RAW = createStructure_RAW(Date,Time,SaRa,EL_NAMES,EL_NUMS,M,T,rec_dur,fileinfo,nr_channel);
-    SPIKEZ.TS = read_MCS_hd5_TS(filepath); % load spike Timestamp data if available
+    [TS,Date,Time,SaRa,EL_NAMES,EL_NUMS,rec_dur,fileinfo,nr_channel] = read_MCS_hd5_TS(filepath); % load spike Timestamp data if available
+    AMP = TS;
+    AMP(~isnan(AMP))=1; % no amplitudes available, so create an artificial matrix
+    SPIKEZ = createStructure_SPIKEZ(TS,AMP,SaRa,rec_dur,fileinfo,nr_channel,Time,Date,EL_NAMES,EL_NUMS);
 else % fileformat not supported
     errordlg('Unknown Fileformat')
 end
