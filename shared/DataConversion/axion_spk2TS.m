@@ -1,4 +1,4 @@
-% Convert an axion 24 well file *.spk to DrCell readable TS files (for each well a
+% Convert an axion file *.spk to DrCell readable TS files (for each well a
 % separate TS file is created)
 %
 % input:
@@ -11,15 +11,20 @@
 % Author: Manuel Ciba
 % Date: 26.01.2024
 
-function axion24well_spk2TS(file_path)
+function axion_spk2TS(file_path)
     
     % load all spike trains using the Axion lib
     Data = AxisFile(file_path).SpikeData.LoadData; 
 
-    % define well names
-    wellRow = ['A', 'B', 'C', 'D'];
-    wellCol = ['1', '2', '3', '4', '5', '6'];
-    
+    % get number of wells and electrodes (=channels)
+    numWellRows = size(Data, 1);
+    numWellCols = size(Data, 2);
+    numElRows = size(Data, 3);
+    numElCols = size(Data, 4);
+    nr_channel = numElRows * numElCols;
+    nr_wells = numWellRows * numWellCols;
+    disp([num2str(nr_wells) "-well data"])
+
     % get meta data which is saved in any non-empty well 
     for i = 1:size(Data, 1)  % for Well Aj ... Dj
         for j= 1:size(Data, 2)  % for Well i1 ... i6
@@ -36,17 +41,23 @@ function axion24well_spk2TS(file_path)
     % unpack metadata to DrCell variables
     rec_dur = metadata.Duration;
     SaRa = metadata.SamplingFrequency;
-    nr_channel = 16;
     fileinfo = metadata.Description;
     d = metadata.BlockVectorStartTime;
     Time = [num2str(d.Hour,'%02d') num2str(d.Minute,'%02d') num2str(d.Second,'%02d')];
     Date = [num2str(d.Year) num2str(d.Month,'%02d') num2str(d.Day,'%02d')];
-    EL_NAMES = {'11','12','13','14','21','22','23','24','31','32','33','34','41','42','43','44'};
-    EL_NUMS = [11 12 13 14 21 22 23 24 31 32 33 34 41 42 43 44]; 
+
+    % Generate Well and Electrode names
+    wellRowNames = arrayfun(@(x) char('A' + x - 1), 1:numWellRows, 'UniformOutput', false);
+    wellColNames = arrayfun(@num2str, 1:numWellCols, 'UniformOutput', false);
+    [rows, cols] = ndgrid(1:numElRows, 1:numElCols);
+    EL_NAMES = arrayfun(@(r, c) [num2str(r) num2str(c)], rows, cols, 'UniformOutput', false);    
+    EL_NUMS = rows * 10 + cols;
+    EL_NAMES = EL_NAMES(:); % Convert to column vector
+    EL_NUMS = EL_NUMS(:);   % Convert to column vector
 
     % get spike time stamps and store it in matrix TS
-    TS = zeros(1, 16);
-    AMP = zeros(1, 16);
+    TS = zeros(1, nr_channel);
+    AMP = zeros(1, nr_channel);
     for i = 1:size(Data, 1)  % for Well Aj ... Dj
         for j= 1:size(Data, 2)  % for Well i1 ... i6
             idx_el = 0;  % init electrode index
@@ -86,11 +97,16 @@ function axion24well_spk2TS(file_path)
             TS(TS > rec_dur) = NaN;
 
             % only save file if at least one spike
-            if any(~isnan(TS))
+            if any(any(~isnan(TS)))
                 SPIKEZ = createStructure_SPIKEZ(TS,AMP,SaRa,rec_dur,fileinfo,nr_channel,Time,Date,EL_NAMES,EL_NUMS);
-                wellName = [wellRow(i) wellCol(j)];
+                wellName = [wellRowNames{i} wellColNames{j}];
                 [root_path, file_name, ext] = fileparts(file_path);
-                folder = [root_path filesep 'TS' filesep wellName];
+                plate_id = regexp(file_name, 'Plate\d+', 'match', 'once');
+                if ~isempty(plate_id)
+                    folder = [root_path filesep 'TS' filesep wellName '_' plate_id];
+                else
+                    folder = [root_path filesep 'TS' filesep wellName];
+                end
                 if ~exist(folder, 'dir')
                    mkdir(folder)
                 end
