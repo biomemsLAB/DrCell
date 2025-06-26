@@ -43,7 +43,7 @@ C. Nick, M. Goldhammer, R. Bestel, F. Steger, A.W. Daus and C. Thielemann:
 DrCell – A Software Tool for the Analysis of Cell Signals recorded with Extracellular Microelectrodes Signal Processing: 
 An International Journal (SPIJ) 7(2), 96-109, 2013.
 
-Copyright (C) 2009-2024 Christoph Nick, Michael Goldhammer, Robert
+Copyright (C) 2009-2025 Christoph Nick, Michael Goldhammer, Robert
 Bestel, Frederik Steger, Manuel Ciba, Johannes Forster, Andreas W. Daus, Christiane Thielemann
 
 This program is free software: you can redistribute it and/or modify
