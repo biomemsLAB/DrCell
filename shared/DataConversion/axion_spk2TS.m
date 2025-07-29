@@ -101,7 +101,7 @@ function axion_spk2TS(file_path)
                 SPIKEZ = createStructure_SPIKEZ(TS,AMP,SaRa,rec_dur,fileinfo,nr_channel,Time,Date,EL_NAMES,EL_NUMS);
                 wellName = [wellRowNames{i} wellColNames{j}];
                 [root_path, file_name, ext] = fileparts(file_path);
-                plate_id = regexp(file_name, 'Plate\d\b', 'match', 'once');
+                plate_id = regexp(file_name, 'Plate\d(?=\()', 'match', 'once');
                 if ~isempty(plate_id)
                     folder = [root_path filesep 'TS' filesep wellName '_' plate_id];
                 else
