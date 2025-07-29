@@ -23,7 +23,7 @@ function axion_spk2TS(file_path)
     numElCols = size(Data, 4);
     nr_channel = numElRows * numElCols;
     nr_wells = numWellRows * numWellCols;
-    disp([num2str(nr_wells) "-well data"])
+    disp([num2str(nr_wells) '-well data'])
 
     % get meta data which is saved in any non-empty well 
     for i = 1:size(Data, 1)  % for Well Aj ... Dj
@@ -101,7 +101,7 @@ function axion_spk2TS(file_path)
                 SPIKEZ = createStructure_SPIKEZ(TS,AMP,SaRa,rec_dur,fileinfo,nr_channel,Time,Date,EL_NAMES,EL_NUMS);
                 wellName = [wellRowNames{i} wellColNames{j}];
                 [root_path, file_name, ext] = fileparts(file_path);
-                plate_id = regexp(file_name, 'Plate\d+', 'match', 'once');
+                plate_id = regexp(file_name, 'Plate\d\b', 'match', 'once');
                 if ~isempty(plate_id)
                     folder = [root_path filesep 'TS' filesep wellName '_' plate_id];
                 else
