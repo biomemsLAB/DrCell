@@ -59,7 +59,7 @@ function axion_spk2TS(file_path)
     for i = 1:size(Data, 1)  % for Well Aj ... Dj
         for j= 1:size(Data, 2)  % for Well i1 ... i6
 
-            % init TS and AMP (important! Initializisation has to be done for every well, otherwise spikes of previous well are copied into current well)
+            % init TS and AMP (important: Initialization has to be done for every well)
             TS = zeros(1, nr_channel);
             AMP = zeros(1, nr_channel);
             idx_el = 0;  % init electrode index
