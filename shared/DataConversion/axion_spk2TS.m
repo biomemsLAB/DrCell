@@ -56,10 +56,12 @@ function axion_spk2TS(file_path)
     EL_NUMS = EL_NUMS(:);   % Convert to column vector
 
     % get spike time stamps and store it in matrix TS
-    TS = zeros(1, nr_channel);
-    AMP = zeros(1, nr_channel);
     for i = 1:size(Data, 1)  % for Well Aj ... Dj
         for j= 1:size(Data, 2)  % for Well i1 ... i6
+
+            % init TS and AMP (important! Initializisation has to be done for every well, otherwise spikes of previous well are copied into current well)
+            TS = zeros(1, nr_channel);
+            AMP = zeros(1, nr_channel);
             idx_el = 0;  % init electrode index
             for k = 1:size(Data,3)  % for electrode 1l ... 4l
                 for l = 1:size(Data,4)  % for electrode k1 ... k4
