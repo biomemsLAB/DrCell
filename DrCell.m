@@ -28,7 +28,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20250626';
+DrCellVersion = '20250923';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
@@ -348,3 +348,4 @@ end
 % 29.04.2022    - Add textfield to GUI_AutomatedAnalysis to enter basenoise factor for threshold calculation (MC)
 % 19.05.2022    - Add support for old _TS.mat files ("sixwell-error") (MC)
 %
+
