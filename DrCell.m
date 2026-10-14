@@ -28,7 +28,7 @@ close all;
 clear all;
 clc
 
-DrCellVersion = '20260520';
+DrCellVersion = '20261014';
 
 disp (['--- Dr.Cell ' DrCellVersion ' ---']);
 
