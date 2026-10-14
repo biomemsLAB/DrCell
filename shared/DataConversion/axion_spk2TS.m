@@ -42,9 +42,26 @@ function axion_spk2TS(file_path)
     rec_dur = metadata.Duration;
     SaRa = metadata.SamplingFrequency;
     fileinfo = metadata.Description;
-    d = metadata.BlockVectorStartTime;
-    Time = [num2str(d.Hour,'%02d') num2str(d.Minute,'%02d') num2str(d.Second,'%02d')];
-    Date = [num2str(d.Year) num2str(d.Month,'%02d') num2str(d.Day,'%02d')];
+
+    % get plate serial number
+    tokens = regexp(fileinfo, 'Plate Serial Number,(\d+\-\d+)', 'tokens');
+    plate_id = tokens{1}{1};
+
+    % get date time of original file. Note date time in metadata is not the
+    % recording time but the time of spike detection!!!
+    pattern = 'Original File Time,(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})';
+    matches = regexp(fileinfo, pattern, 'tokens');
+    if ~isempty(matches)
+        timeStr = matches{1}{1};  % "08/21/2026 16:50:00"
+        % Option 1: Parse with datetime and extract components
+        dt = datetime(timeStr, 'InputFormat', 'MM/dd/yyyy HH:mm:ss');
+    else
+        % date time of the conducted spike detection
+        dt = metadata.BlockVectorStartTime;
+    end
+    
+    Time = [num2str(dt.Hour,'%02d') num2str(dt.Minute,'%02d') num2str(dt.Second,'%02d')];
+    Date = [num2str(dt.Year) num2str(dt.Month,'%02d') num2str(dt.Day,'%02d')];
 
     % Generate Well and Electrode names
     wellRowNames = arrayfun(@(x) char('A' + x - 1), 1:numWellRows, 'UniformOutput', false);
@@ -99,15 +116,11 @@ function axion_spk2TS(file_path)
             TS(TS > rec_dur) = NaN;
 
             % only save file if at least one spike
-            if any(any(~isnan(TS)))
+            if 1 %any(any(~isnan(TS)))
                 SPIKEZ = createStructure_SPIKEZ(TS,AMP,SaRa,rec_dur,fileinfo,nr_channel,Time,Date,EL_NAMES,EL_NUMS);
                 wellName = [wellRowNames{i} wellColNames{j}];
                 [root_path, file_name, ext] = fileparts(file_path);
 
-                % get plate id
-                tokens = regexp(fileinfo, 'Plate Serial Number,(\d+\-\d+)', 'tokens');
-                plate_id = tokens{1}{1};
-                
                 if ~isempty(plate_id)
                     folder = [root_path filesep 'TS' filesep wellName '_' plate_id];
                 else
